@@ -303,7 +303,9 @@ export const HorizontalScrollSection = () => {
   const sectionStickyEngagedRef = useRef(false);
   const isTablet = viewportWidth <= 1200;
   const isMobile = viewportWidth <= 900;
-  const isWideDesktop = viewportWidth >= 1600;
+  /** До 1100px — более компактная типографика и geo. */
+  const isUpTo1100 = viewportWidth <= 1100;
+  const isWideDesktop = viewportWidth >= 1650;
   const isNarrowDesktop = viewportWidth < 1400 && viewportWidth > 1200;
   const scrollPerPanelVh = isMobile ? 26 : isTablet ? 30 : 36;
 
@@ -465,9 +467,11 @@ export const HorizontalScrollSection = () => {
   }, [activePanelIndex]);
 
   const geoRowHeightPx = isMobile
-    ? 90
+    ? 80
     : isTablet
-      ? 108
+      ? isUpTo1100
+        ? 96
+        : 108
       : isWideDesktop
         ? 156
         : isNarrowDesktop
@@ -477,9 +481,11 @@ export const HorizontalScrollSection = () => {
     ? 30
     : Math.round(geoRowHeightPx * GEO_STEP_RATIO);
   const geoBlockWidthPx = isMobile
-    ? 380
+    ? 336
     : isTablet
-      ? 560
+      ? isUpTo1100
+        ? 480
+        : 560
       : isWideDesktop
         ? 760
         : isNarrowDesktop
@@ -488,16 +494,20 @@ export const HorizontalScrollSection = () => {
   const showGeoHighlights = !isMobile;
   const geoSkewPx = Math.round(geoRowHeightPx * GEO_SKEW_RATIO);
   const geoLabelFontSize = isTablet
-    ? 'clamp(18px, 2vw, 24px)'
+    ? isUpTo1100
+      ? 'clamp(15px, 1.65vw, 20px)'
+      : 'clamp(18px, 2vw, 24px)'
     : isWideDesktop
       ? 'clamp(22px, 2vw, 30px)'
       : isNarrowDesktop
         ? 'clamp(18px, 1.6vw, 24px)'
       : 'clamp(22px, 2vw, 30px)';
   const leftColumnMaxWidth = isMobile
-    ? 520
+    ? 460
     : isTablet
-      ? 600
+      ? isUpTo1100
+        ? 520
+        : 600
       : isNarrowDesktop
         ? 600
         : isWideDesktop
@@ -505,27 +515,84 @@ export const HorizontalScrollSection = () => {
           : 680;
   const leftColumnMarginLeft = 0;
   const leftTitleFontSize = isMobile
-    ? 'clamp(24px, 8.4vw, 38px)'
+    ? 'clamp(20px, 6.4vw, 30px)'
     : isTablet
-      ? 'clamp(30px, 5vw, 52px)'
+      ? isUpTo1100
+        ? 'clamp(22px, 3.6vw, 36px)'
+        : 'clamp(26px, 4.4vw, 44px)'
       : isNarrowDesktop
-        ? 'clamp(34px, 4.6vw, 58px)'
-        : 'clamp(30px, 6vw, 78px)';
+        ? 'clamp(28px, 3.9vw, 48px)'
+        : isWideDesktop
+          ? 'clamp(22px, 3.8vw, 44px)'
+          : 'clamp(26px, 5vw, 62px)';
   const leftTitleLetterSpacing = isMobile
     ? '0.04em'
     : isTablet
       ? '0.06em'
       : '0.08em';
   const leftTextFontSize = isMobile
-    ? 'clamp(13px, 3.4vw, 16px)'
+    ? 'clamp(12px, 3.05vw, 15px)'
     : isTablet
-      ? 'clamp(14px, 2vw, 17px)'
+      ? isUpTo1100
+        ? 'clamp(13px, 1.75vw, 15px)'
+        : 'clamp(14px, 2vw, 17px)'
       : isNarrowDesktop
         ? 'clamp(14px, 1.45vw, 17px)'
-        : 'clamp(15px, 1.8vw, 21px)';
+        : isWideDesktop
+          ? 'clamp(13px, 1.45vw, 18px)'
+          : 'clamp(15px, 1.8vw, 21px)';
   const leftTextLineHeight = isMobile ? 1.55 : isTablet ? 1.62 : 1.7;
-  const leftIdFontSize = isMobile ? 10 : 12;
+  const leftIdFontSize = isMobile
+    ? 9
+    : isTablet && isUpTo1100
+      ? 10
+      : isWideDesktop
+        ? 11
+        : 12;
   const leftIdLetterSpacing = isMobile ? '0.2em' : '0.24em';
+
+  const accentVisual = useMemo(() => {
+    const vw = viewportWidth || 1200;
+    const compactAccent = isMobile || (isTablet && isUpTo1100);
+
+    const railGlowPx = Math.round(
+      Math.min(28, Math.max(10, vw * (compactAccent ? 0.032 : 0.017)))
+    );
+    const dotGlowPx = Math.round(
+      Math.min(34, Math.max(11, vw * (compactAccent ? 0.036 : 0.02)))
+    );
+
+    const railH = compactAccent
+      ? Math.min(3, Math.max(2, Math.round(vw * 0.004)))
+      : Math.min(4, Math.max(2, Math.round(vw * 0.00135)));
+
+    const tintAlpha = compactAccent
+      ? Math.min(0.13, 0.088 + vw / 11000)
+      : Math.min(0.17, 0.1 + vw / 9500);
+
+    const geoCardGradient = `linear-gradient(145deg, ${darkTheme.colors.surface} 0%, rgba(28, 28, 28, 0.97) 50%, rgba(16, 163, 127, ${tintAlpha}) 100%)`;
+
+    const railGradient = `linear-gradient(90deg, ${darkTheme.colors.accent} 0%, ${darkTheme.colors.accentHover} 100%)`;
+
+    const glowA = compactAccent ? 0.26 : 0.33;
+    const glowB = compactAccent ? 0.11 : 0.17;
+    const railShadow = `0 0 ${railGlowPx}px rgba(16,163,127,${glowA}), 0 0 ${Math.round(railGlowPx * 1.65)}px rgba(16,163,127,${glowB})`;
+
+    const dotGlow = `0 0 ${dotGlowPx}px rgba(16,163,127,${compactAccent ? 0.36 : 0.44})`;
+
+    const dropY = Math.round(Math.min(38, 13 + vw * 0.013));
+    const dropBlur = Math.round(Math.min(82, 38 + vw * 0.026));
+    const geoDrop = `drop-shadow(0 ${dropY}px ${dropBlur}px rgba(0,0,0,0.52))`;
+
+    return {
+      railH,
+      railGradient,
+      railShadow,
+      dotGlow,
+      geoCardGradient,
+      geoDrop
+    };
+  }, [viewportWidth, isMobile, isTablet, isUpTo1100]);
 
   return (
     <section
@@ -538,21 +605,16 @@ export const HorizontalScrollSection = () => {
       <div style={stickyStyle}>
         <div
           style={{
-            position: 'absolute',
-            top: isMobile ? 14 : 24,
-            right: isMobile ? 14 : 28,
-            color: 'rgba(255,255,255,0.55)',
-            fontSize: isMobile ? 10 : 12,
-            letterSpacing: isMobile ? '0.14em' : '0.2em'
-          }}
-        >
-          HORIZONTAL FLOW
-        </div>
-        <div
-          style={{
             ...railStyle,
             top: isMobile ? 16 : railStyle.top,
-            width: isMobile ? '88vw' : isTablet ? '82vw' : railStyle.width
+            height: accentVisual.railH,
+            width: isMobile
+              ? '88vw'
+              : isTablet
+                ? isUpTo1100
+                  ? '78vw'
+                  : '82vw'
+                : railStyle.width
           }}
         >
           <div
@@ -563,8 +625,8 @@ export const HorizontalScrollSection = () => {
               width: `${scrollLinePercent}%`,
               height: '100%',
               borderRadius: '999px',
-              background: `linear-gradient(90deg, ${darkTheme.colors.accent}, ${darkTheme.colors.accentHover})`,
-              boxShadow: '0 0 16px rgba(16,163,127,0.32)'
+              background: accentVisual.railGradient,
+              boxShadow: accentVisual.railShadow
             }}
           />
           {panels.map((panel, index) => {
@@ -582,11 +644,11 @@ export const HorizontalScrollSection = () => {
               >
                 <div
                   style={{
-                    width: isActive ? 12 : 9,
-                    height: isActive ? 12 : 9,
+                    width: isActive ? (isUpTo1100 ? 10 : 12) : isUpTo1100 ? 8 : 9,
+                    height: isActive ? (isUpTo1100 ? 10 : 12) : isUpTo1100 ? 8 : 9,
                     borderRadius: '50%',
                     background: isActive ? darkTheme.colors.accent : darkTheme.colors.muted,
-                    boxShadow: isActive ? '0 0 20px rgba(16,163,127,0.42)' : 'none',
+                    boxShadow: isActive ? accentVisual.dotGlow : 'none',
                     transition: 'all 220ms ease'
                   }}
                 />
@@ -600,7 +662,7 @@ export const HorizontalScrollSection = () => {
             top: isMobile ? 34 : 44,
             left: '50%',
             transform: 'translateX(-50%)',
-            fontSize: isMobile ? 11 : 14,
+            fontSize: isMobile ? 10 : isUpTo1100 ? 12 : 14,
             letterSpacing: isMobile ? '0.12em' : '0.18em',
             textTransform: 'uppercase',
             whiteSpace: 'nowrap',
@@ -638,6 +700,18 @@ export const HorizontalScrollSection = () => {
                 filter: blur(0);
               }
             }
+            @keyframes geoSlideInWide {
+              from {
+                opacity: 0;
+                transform: translateX(72%);
+                filter: blur(12px);
+              }
+              to {
+                opacity: 1;
+                transform: translateX(0%);
+                filter: blur(0);
+              }
+            }
           `}
         </style>
         <div
@@ -654,7 +728,15 @@ export const HorizontalScrollSection = () => {
                 ...panelStyleBase,
                 paddingTop: 0,
                 paddingBottom: 0,
-                paddingLeft: isMobile ? '5vw' : '112px',
+                paddingLeft: isMobile
+                  ? 'clamp(16px, 4.8vw, 40px)'
+                  : isTablet
+                    ? isUpTo1100
+                      ? 'clamp(44px, 6.5vw, 84px)'
+                      : '104px'
+                    : isWideDesktop
+                      ? 'clamp(168px, 11.5vw, 280px)'
+                      : '148px',
                 paddingRight: isMobile ? '5vw' : '8vw'
               }}
             >
@@ -670,7 +752,7 @@ export const HorizontalScrollSection = () => {
                     fontSize: leftIdFontSize,
                     color: darkTheme.colors.muted,
                     letterSpacing: leftIdLetterSpacing,
-                    marginBottom: isMobile ? 10 : 14
+                    marginBottom: isMobile ? 8 : isUpTo1100 ? 12 : 14
                   }}
                 >
                   {panel.id}
@@ -690,7 +772,7 @@ export const HorizontalScrollSection = () => {
                 </h3>
                 <p
                   style={{
-                    margin: isMobile ? '14px 0 0' : '18px 0 0',
+                    margin: isMobile ? '12px 0 0' : isUpTo1100 ? '16px 0 0' : '18px 0 0',
                     maxWidth: leftColumnMaxWidth,
                     fontSize: leftTextFontSize,
                     lineHeight: leftTextLineHeight,
@@ -707,8 +789,8 @@ export const HorizontalScrollSection = () => {
                   <div
                     style={{
                       ...geoHighlightsRailStyle,
-                      left: isWideDesktop ? '14%' : geoHighlightsRailStyle.left,
-                      right: isTablet ? '-18vw' : isWideDesktop ? '-24vw' : '-28vw',
+                      left: isWideDesktop ? '0' : geoHighlightsRailStyle.left,
+                      right: isTablet ? '-18vw' : isWideDesktop ? '-16vw' : '-28vw',
                       top: `calc(50% - ${(panel.geoHighlights.length * geoRowHeightPx -
                         Math.max(0, panel.geoHighlights.length - 1) * GEO_HIGHLIGHT_ROW_OVERLAP_PX) / 2}px)`
                     }}
@@ -735,8 +817,9 @@ export const HorizontalScrollSection = () => {
                       ? isEntering
                         ? {
                             opacity: 1,
-                            animation:
-                              'geoSlideIn 680ms cubic-bezier(0.22, 1, 0.36, 1) both'
+                            animation: isWideDesktop
+                              ? 'geoSlideInWide 820ms cubic-bezier(0.22, 1, 0.36, 1) both'
+                              : 'geoSlideIn 680ms cubic-bezier(0.22, 1, 0.36, 1) both'
                           }
                         : {
                             opacity: 1,
@@ -751,7 +834,7 @@ export const HorizontalScrollSection = () => {
                       <div
                         key={`${panel.id}-${item}`}
                         style={{
-                          width: `calc(${geoBlockWidthPx}px + ${isTablet ? 10 : 14}vw)`,
+                          width: `calc(${geoBlockWidthPx}px + ${isTablet ? (isUpTo1100 ? 8 : 10) : 14}vw)`,
                           maxWidth: 'none',
                           alignSelf: 'flex-end',
                           marginRight: highlightIndex * geoStepPx,
@@ -769,8 +852,12 @@ export const HorizontalScrollSection = () => {
                               height: geoRowHeightPx,
                               clipPath: geoParallelogramClip(geoSkewPx),
                               WebkitClipPath: geoParallelogramClip(geoSkewPx),
+                              background: accentVisual.geoCardGradient,
+                              filter: accentVisual.geoDrop,
                               padding: isTablet
-                                ? '28px 28px 28px clamp(34px, 4vw, 64px)'
+                                ? isUpTo1100
+                                  ? '22px 22px 22px clamp(26px, 3.4vw, 52px)'
+                                  : '28px 28px 28px clamp(34px, 4vw, 64px)'
                                 : geoHighlightBlockStyle.padding
                             }}
                           >

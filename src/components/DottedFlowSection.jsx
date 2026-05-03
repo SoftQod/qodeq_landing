@@ -57,10 +57,9 @@ export const DottedFlowSection = () => {
     <section
       ref={sectionRef}
       style={{
-        minHeight: '100vh',
         background: darkTheme.colors.background,
         color: darkTheme.colors.primary,
-        padding: '72px 0 0',
+        padding: '72px 0 clamp(120px, 15vw, 220px)',
         fontFamily: "Inter, 'Segoe UI', Arial, sans-serif",
         width: '100%',
         overflowX: 'clip'

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 
 const darkTheme = {
@@ -92,7 +92,7 @@ const anchorRailStyle = {
 
 const titleStyle = {
   position: 'absolute',
-  top: '52%',
+  top: '51%',
   left: '50%',
   transform: 'translate(-50%, -50%)',
   margin: 0,
@@ -170,6 +170,7 @@ const anchors = [
 
 export const LiquidHeroScene = () => {
   const mountRef = useRef(null);
+  const labelLayerRef = useRef(null);
   const titleRef = useRef(null);
   const subtitleRef = useRef(null);
   const buttonRef = useRef(null);
@@ -181,34 +182,45 @@ export const LiquidHeroScene = () => {
   const isMobile = viewportWidth <= 900;
   const isSmallMobile = viewportWidth <= 640;
 
+  const heroTextMul = useMemo(() => {
+    if (viewportWidth <= 900) {
+      return 1;
+    }
+    const growT = Math.min(1, Math.max(0, (viewportWidth - 520) / (2720 - 520)));
+    return 0.62 + 0.38 * growT;
+  }, [viewportWidth]);
+
   useEffect(() => {
     const updateActiveAnchor = () => {
       const viewportHeight = window.innerHeight || 1;
-      const checkpoint = viewportHeight * 0.5;
-      let intersectedId = '';
-      let fallbackId = anchors[0].id;
-      let fallbackDistance = Number.POSITIVE_INFINITY;
+      const docEl = document.documentElement;
+      const maxScrollY = Math.max(0, docEl.scrollHeight - viewportHeight);
+      const scrollY = window.scrollY ?? docEl.scrollTop ?? 0;
 
+      const lastAnchor = anchors[anchors.length - 1];
+      const lastNode = document.getElementById(lastAnchor.id);
+      if (lastNode && maxScrollY > 0 && scrollY >= maxScrollY - 3) {
+        const lastRect = lastNode.getBoundingClientRect();
+        if (lastRect.bottom > 0 && lastRect.top < viewportHeight) {
+          setActiveAnchor(lastAnchor.id);
+          return;
+        }
+      }
+
+      const activationY = viewportHeight * 0.5;
+      let currentId = anchors[0].id;
       anchors.forEach((anchor) => {
         const node = document.getElementById(anchor.id);
         if (!node) {
           return;
         }
         const rect = node.getBoundingClientRect();
-        const intersectsCheckpoint = rect.top <= checkpoint && rect.bottom > checkpoint;
-
-        if (intersectsCheckpoint) {
-          intersectedId = anchor.id;
-        }
-
-        const distance = Math.abs(rect.top - checkpoint);
-        if (distance < fallbackDistance) {
-          fallbackDistance = distance;
-          fallbackId = anchor.id;
+        if (rect.top <= activationY) {
+          currentId = anchor.id;
         }
       });
 
-      setActiveAnchor(intersectedId || fallbackId);
+      setActiveAnchor(currentId);
     };
 
     updateActiveAnchor();
@@ -251,8 +263,11 @@ export const LiquidHeroScene = () => {
       powerPreference: 'low-power'
     });
     renderer.setClearColor(0x0d0d0d, 0);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
+    const getAdaptivePixelRatio = (w) =>
+      Math.min(window.devicePixelRatio || 1, w <= 560 ? 1.05 : w <= 900 ? 1.15 : w <= 1400 ? 1.22 : 1.35);
+    renderer.setPixelRatio(getAdaptivePixelRatio(window.innerWidth || 1440));
     mountNode.appendChild(renderer.domElement);
+    renderer.domElement.style.display = 'block';
 
     const lightA = new THREE.DirectionalLight(0xffffff, 1.35);
     lightA.position.set(0, 6, 0);
@@ -287,39 +302,54 @@ export const LiquidHeroScene = () => {
     mesh.position.y = 0.06;
     scene.add(mesh);
 
-    const getSatelliteConfigs = (width) => {
-      if (width <= 640) {
-        return [
-          { x: -1.18, yOffset: 0.44, timePhase: 0.9, rotSign: 1 },
-          { x: -1.18, yOffset: -0.42, timePhase: 1.4, rotSign: -1 },
-          { x: 1.18, yOffset: 0.44, timePhase: 1.1, rotSign: -1 },
-          { x: 1.18, yOffset: -0.42, timePhase: 1.6, rotSign: 1 }
-        ];
-      }
-      if (width <= 900) {
-        return [
-          { x: -1.42, yOffset: 0.5, timePhase: 0.9, rotSign: 1 },
-          { x: -1.42, yOffset: -0.5, timePhase: 1.4, rotSign: -1 },
-          { x: 1.42, yOffset: 0.5, timePhase: 1.1, rotSign: -1 },
-          { x: 1.42, yOffset: -0.5, timePhase: 1.6, rotSign: 1 }
-        ];
-      }
-      if (width <= 1200) {
-        return [
-          { x: -1.62, yOffset: 0.54, timePhase: 0.9, rotSign: 1 },
-          { x: -1.62, yOffset: -0.54, timePhase: 1.4, rotSign: -1 },
-          { x: 1.62, yOffset: 0.54, timePhase: 1.1, rotSign: -1 },
-          { x: 1.62, yOffset: -0.54, timePhase: 1.6, rotSign: 1 }
-        ];
-      }
+    /** Плавная разметка орбит от ширины (без «ступенек»). `spreadMul` — общее сжатие из resize(). */
+    const getSatelliteConfigs = (width, spreadMul = 1) => {
+      const w = THREE.MathUtils.clamp(width, 360, 2160);
+      const layoutT = THREE.MathUtils.clamp((w - 380) / 1060, 0, 1);
+      let xOuter = THREE.MathUtils.lerp(0.98, 1.86, layoutT) * spreadMul;
+      let ySpread = THREE.MathUtils.lerp(0.34, 0.56, layoutT) * spreadMul;
+
       return [
-        { x: -1.82, yOffset: 0.55, timePhase: 0.9, rotSign: 1 },
-        { x: -1.82, yOffset: -0.55, timePhase: 1.4, rotSign: -1 },
-        { x: 1.82, yOffset: 0.55, timePhase: 1.1, rotSign: -1 },
-        { x: 1.82, yOffset: -0.55, timePhase: 1.6, rotSign: 1 }
+        { x: -xOuter, yOffset: ySpread, timePhase: 0.9, rotSign: 1 },
+        { x: -xOuter, yOffset: -ySpread, timePhase: 1.4, rotSign: -1 },
+        { x: xOuter, yOffset: ySpread, timePhase: 1.1, rotSign: -1 },
+        { x: xOuter, yOffset: -ySpread, timePhase: 1.6, rotSign: 1 }
       ];
     };
-    let satelliteConfigs = getSatelliteConfigs(window.innerWidth || 1440);
+
+    const computeSceneLayout = (width, height) => {
+      const aspect = width / Math.max(height, 320);
+      const camT = THREE.MathUtils.clamp((width - 520) / 920, 0, 1);
+      const growT = THREE.MathUtils.clamp((width - 520) / (2720 - 520), 0, 1);
+
+      let orbitSpreadMul = THREE.MathUtils.lerp(0.56, 0.93, growT);
+      let orbitSat = THREE.MathUtils.lerp(0.44, 1.02, growT);
+      let orbitMain = THREE.MathUtils.lerp(0.39, 0.9, growT);
+
+      let camZ = THREE.MathUtils.lerp(5.08, 4.3, camT);
+      camZ += THREE.MathUtils.lerp(0.62, 0, growT);
+
+      if (aspect > 2) {
+        const uw = THREE.MathUtils.clamp((aspect - 2) / 0.95, 0, 1);
+        orbitMain *= THREE.MathUtils.lerp(1, 0.72, uw);
+        orbitSat *= THREE.MathUtils.lerp(1, 0.8, uw);
+        orbitSpreadMul *= THREE.MathUtils.lerp(1, 0.82, uw);
+        camZ += THREE.MathUtils.lerp(0, 0.62, uw);
+      }
+
+      return { orbitSat, orbitMain, camZ, orbitSpreadMul };
+    };
+
+    const initialLayout = computeSceneLayout(
+      window.innerWidth || 1440,
+      window.innerHeight || 900
+    );
+    let satelliteConfigs = getSatelliteConfigs(
+      window.innerWidth || 1440,
+      initialLayout.orbitSpreadMul
+    );
+
+    const orbitScale = { sat: initialLayout.orbitSat, main: initialLayout.orbitMain };
 
     const satelliteMeshes = [];
     const satelliteData = [];
@@ -475,16 +505,22 @@ export const LiquidHeroScene = () => {
     const resize = () => {
       const width = mountNode.clientWidth || window.innerWidth;
       const height = mountNode.clientHeight || window.innerHeight;
-      const isMobileWidth = width <= 900;
-      const isTabletWidth = width > 900 && width <= 1200;
 
-      camera.fov = isMobileWidth ? 48 : isTabletWidth ? 43 : 38;
-      camera.position.z = isMobileWidth ? 4.85 : isTabletWidth ? 4.55 : 4.35;
-      camera.position.y = isMobileWidth ? 0.12 : 0.05;
+      const camT = THREE.MathUtils.clamp((width - 520) / 920, 0, 1);
+      camera.fov = THREE.MathUtils.lerp(49, 37.5, camT);
+
+      const layout = computeSceneLayout(width, height);
+      camera.position.z = layout.camZ;
+      camera.position.y = THREE.MathUtils.lerp(0.13, 0.05, camT);
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
-      renderer.setSize(width, height, false);
-      satelliteConfigs = getSatelliteConfigs(width);
+
+      renderer.setPixelRatio(getAdaptivePixelRatio(width));
+      renderer.setSize(width, height, true);
+
+      orbitScale.sat = layout.orbitSat;
+      orbitScale.main = layout.orbitMain;
+      satelliteConfigs = getSatelliteConfigs(width, layout.orbitSpreadMul);
     };
     resize();
     window.addEventListener('resize', resize);
@@ -536,10 +572,20 @@ export const LiquidHeroScene = () => {
         satMesh.position.z = 0.04 + driftZ;
         satMesh.rotation.y += dt * 0.12 * sat.rotSign;
         satMesh.rotation.x += dt * 0.06;
-        satMesh.scale.setScalar((0.72 + intro * 0.28) * 0.42 * pulse);
+        satMesh.scale.setScalar((0.72 + intro * 0.28) * 0.42 * pulse * orbitScale.sat);
       });
 
-      const labelPad = mountNode.getBoundingClientRect();
+      const labelLayerEl = labelLayerRef.current;
+      const canvasRect = domElement.getBoundingClientRect();
+      const layerRect = labelLayerEl?.getBoundingClientRect();
+      const layerOk =
+        labelLayerEl &&
+        layerRect &&
+        canvasRect.width > 2 &&
+        canvasRect.height > 2 &&
+        layerRect.width > 2 &&
+        layerRect.height > 2;
+
       for (let i = 0; i < satelliteMeshes.length; i += 1) {
         const labelEl = document.getElementById(`hero-sat-label-${i}`);
         if (!labelEl) {
@@ -553,15 +599,16 @@ export const LiquidHeroScene = () => {
         labelWorld.project(camera);
 
         const isBehind = labelWorld.z > 1;
-        // Keep label coordinates local to the hero container.
-        // Using viewport offsets here causes visible drift while page scrolls.
-        const x = (labelWorld.x * 0.5 + 0.5) * labelPad.width;
-        const y = (-labelWorld.y * 0.5 + 0.5) * labelPad.height;
-
         labelEl.style.opacity = isBehind ? '0' : String(intro * 0.86);
-        if (isBehind) {
+        if (isBehind || !layerOk) {
           continue;
         }
+
+        // NDC → пиксели ровно по отображаемому canvas (как raycaster), затем в локальные координаты слоя подписей.
+        const x =
+          (labelWorld.x * 0.5 + 0.5) * canvasRect.width + canvasRect.left - layerRect.left;
+        const y =
+          (-labelWorld.y * 0.5 + 0.5) * canvasRect.height + canvasRect.top - layerRect.top;
 
         labelEl.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`;
       }
@@ -570,7 +617,7 @@ export const LiquidHeroScene = () => {
       mesh.rotation.x += dt * 0.05;
       mesh.position.x = Math.sin(time * 0.00022) * 0.03;
       mesh.position.y = mainY;
-      mesh.scale.setScalar((0.76 + intro * 0.24) * pulse);
+      mesh.scale.setScalar((0.76 + intro * 0.24) * pulse * orbitScale.main);
       material.opacity = intro;
 
       revealCenteredTitle(titleRef.current, (introRaw - 0.2) / 0.8);
@@ -605,9 +652,16 @@ export const LiquidHeroScene = () => {
       <div ref={mountRef} style={canvasStyle} />
       <div style={vignetteStyle} />
       <div style={grainStyle} />
-      <div style={labelLayerStyle} aria-hidden="true">
+      <div ref={labelLayerRef} style={labelLayerStyle} aria-hidden="true">
         {satelliteLabelTexts.map((text, index) => (
-          <div key={text} id={`hero-sat-label-${index}`} style={satelliteLabelBaseStyle}>
+          <div
+            key={text}
+            id={`hero-sat-label-${index}`}
+            style={{
+              ...satelliteLabelBaseStyle,
+              fontSize: `clamp(${Math.round(10 * heroTextMul)}px, ${(1.2 * heroTextMul).toFixed(2)}vw, ${Math.round(20 * heroTextMul)}px)`
+            }}
+          >
             {text}
           </div>
         ))}
@@ -659,7 +713,7 @@ export const LiquidHeroScene = () => {
                       ? 'translateY(-50%) translateX(0)'
                       : 'translateY(-50%) translateX(-8px)',
                     color: darkTheme.colors.primary,
-                    fontSize: '14px',
+                    fontSize: `${Math.max(11, Math.round(14 * heroTextMul))}px`,
                     letterSpacing: '0.18em',
                     textTransform: 'uppercase',
                     whiteSpace: 'nowrap',
@@ -693,7 +747,11 @@ export const LiquidHeroScene = () => {
             opacity: 0,
             top: isMobile ? (isSmallMobile ? '46%' : '48%') : titleStyle.top,
             letterSpacing: isMobile ? (isSmallMobile ? '0.18em' : '0.24em') : titleStyle.letterSpacing,
-            fontSize: isMobile ? (isSmallMobile ? 'clamp(30px, 13vw, 54px)' : 'clamp(34px, 10vw, 70px)') : titleStyle.fontSize
+            fontSize: isMobile
+              ? isSmallMobile
+                ? 'clamp(30px, 13vw, 54px)'
+                : 'clamp(34px, 10vw, 70px)'
+              : `clamp(${Math.round(26 * heroTextMul)}px, ${(8.5 * heroTextMul).toFixed(2)}vw, ${Math.round(92 * heroTextMul)}px)`
           }}
         >
           QODEQ
@@ -706,7 +764,7 @@ export const LiquidHeroScene = () => {
             position: 'relative',
             transform: 'translateY(24px)',
             filter: 'blur(8px)',
-            fontSize: isMobile ? '9px' : subtitleStyle.fontSize,
+            fontSize: isMobile ? '9px' : `${Math.max(8, Math.round(10 * heroTextMul))}px`,
             letterSpacing: isMobile ? '0.16em' : subtitleStyle.letterSpacing,
             textAlign: 'center',
             paddingInline: isMobile ? '20px' : 0
@@ -724,6 +782,10 @@ export const LiquidHeroScene = () => {
             position: 'relative',
             transform: 'translateY(42px)',
             filter: 'blur(6px)',
+            fontSize: isMobile ? buttonStyle.fontSize : `${Math.max(9, Math.round(11 * heroTextMul))}px`,
+            padding: isMobile
+              ? buttonStyle.padding
+              : `${Math.round(10 * heroTextMul)}px ${Math.round(26 * heroTextMul)}px`,
             boxShadow: isButtonHover ? '0 0 24px rgba(16,163,127,0.28)' : '0 0 0 rgba(0,0,0,0)',
             borderColor: isButtonHover ? darkTheme.colors.accentHover : darkTheme.colors.border,
             background: isButtonHover
