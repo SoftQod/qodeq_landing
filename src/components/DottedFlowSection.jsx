@@ -69,18 +69,18 @@ export const DottedFlowSection = () => {
       <div
         style={{
           margin: '0 auto',
-          width: 'min(1400px, 100%)',
-          paddingInline: '6vw',
+          width: 'min(1760px, 100%)',
+          paddingInline: 'clamp(24px, 6vw, 96px)',
           boxSizing: 'border-box'
         }}
       >
         <div
           style={{
-            fontSize: 11,
+            fontSize: 'clamp(11px, 1vw, 13px)',
             letterSpacing: '0.24em',
             textTransform: 'uppercase',
             color: darkTheme.colors.muted,
-            marginBottom: 18
+            marginBottom: 'clamp(16px, 2vw, 28px)'
           }}
         >
           Process Flow
@@ -88,8 +88,8 @@ export const DottedFlowSection = () => {
         <h2
           style={{
             margin: 0,
-            marginBottom: 78,
-            fontSize: 'clamp(28px, 5vw, 64px)',
+            marginBottom: 'clamp(72px, 8vw, 168px)',
+            fontSize: 'clamp(28px, 5vw, 82px)',
             fontWeight: 300,
             letterSpacing: '0.08em',
             textTransform: 'uppercase'
@@ -98,7 +98,13 @@ export const DottedFlowSection = () => {
           Dotted Integration Line
         </h2>
 
-        <div style={{ position: 'relative', marginTop: 8, height: '120px' }}>
+        <div
+          style={{
+            position: 'relative',
+            marginTop: 'clamp(12px, 1.5vw, 28px)',
+            height: 'clamp(168px, 26vh, 320px)'
+          }}
+        >
           <div
             style={{
               position: 'absolute',
@@ -135,12 +141,13 @@ export const DottedFlowSection = () => {
           <div
             style={{
               position: 'absolute',
-              left: '6vw',
-              width: 'calc(100% - 12vw)',
+              left: 0,
+              width: '100%',
               top: '50%',
               transform: 'translateY(-50%)',
               display: 'grid',
-              gridTemplateColumns: `repeat(${points.length}, minmax(0, 1fr))`
+              gridTemplateColumns: `repeat(${points.length}, minmax(0, 1fr))`,
+              columnGap: 'clamp(28px, 4vw, 112px)'
             }}
           >
             {points.map((point, index) => {
@@ -174,9 +181,9 @@ export const DottedFlowSection = () => {
                     position: 'absolute',
                     left: '50%',
                     transform: 'translateX(-50%)',
-                    top: isTop ? 'auto' : '26px',
-                    bottom: isTop ? '26px' : 'auto',
-                    width: 'clamp(180px, 20vw, 320px)',
+                    top: isTop ? 'auto' : 'clamp(36px, 4.5vw, 72px)',
+                    bottom: isTop ? 'clamp(36px, 4.5vw, 72px)' : 'auto',
+                    width: 'clamp(200px, 22vw, 380px)',
                     opacity: isVisible ? 1 : 0,
                     filter: isVisible ? 'blur(0px)' : 'blur(4px)',
                     transition:
@@ -185,7 +192,7 @@ export const DottedFlowSection = () => {
                 >
                   <div
                     style={{
-                      fontSize: 'clamp(13px, 1.5vw, 20px)',
+                      fontSize: 'clamp(14px, 1.85vw, 28px)',
                       letterSpacing: '0.08em',
                       textTransform: 'uppercase',
                       lineHeight: 1.3,
@@ -196,8 +203,8 @@ export const DottedFlowSection = () => {
                   </div>
                   <div
                     style={{
-                      marginTop: 8,
-                      fontSize: 'clamp(11px, 1.05vw, 14px)',
+                      marginTop: 'clamp(8px, 1.2vw, 14px)',
+                      fontSize: 'clamp(12px, 1.25vw, 19px)',
                       lineHeight: 1.45,
                       letterSpacing: '0.02em',
                       color: darkTheme.colors.muted,
