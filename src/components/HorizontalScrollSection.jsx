@@ -370,45 +370,101 @@ export const HorizontalScrollSection = () => {
   const [geoReveal, setGeoReveal] = useState({ panelId: null, count: 0 });
   const playedGeoIntroByPanelIdRef = useRef(new Set());
   const geoIntroTimersRef = useRef({ stagger: [] });
+  /** Панель, для которой уже запланирован stagger (анимацию не обрываем при уходе со sticky). */
+  const geoIntroArmedPanelIdRef = useRef(null);
+  /** Intro уже начался (первый блок выехал) — при возврате на слайд stagger не запускаем снова. */
+  const geoIntroStartedPanelIdsRef = useRef(new Set());
+  const geoIntroMountedRef = useRef(true);
+
+  useEffect(() => {
+    geoIntroMountedRef.current = true;
+    return () => {
+      geoIntroMountedRef.current = false;
+    };
+  }, []);
 
   const GEO_INTRO_MARK_PLAYED_MS = 720;
 
   useLayoutEffect(() => {
-    const clearGeoIntroTimers = () => {
+    const clearGeoIntroTimers = (resetArm = true) => {
       geoIntroTimersRef.current.stagger.forEach((id) => window.clearTimeout(id));
       geoIntroTimersRef.current = { stagger: [] };
+      if (resetArm) {
+        geoIntroArmedPanelIdRef.current = null;
+      }
+    };
+
+    /**
+     * Не трогаем таймеры незавершённого intro при смене deps эффекта.
+     * Смена activePanelIndex при быстром скролле раньше обрывала stagger — убрано намеренно:
+     * новый слайд в эффекте сам вызывает clearGeoIntroTimers перед своим расписанием.
+     */
+    const makeGeoIntroCleanup = () => () => {
+      const sectionNode = sectionRef.current;
+      if (!sectionNode || !sectionNode.isConnected) {
+        clearGeoIntroTimers(true);
+        return;
+      }
+
+      const armedId = geoIntroArmedPanelIdRef.current;
+      const introIncomplete =
+        armedId && !playedGeoIntroByPanelIdRef.current.has(armedId);
+
+      if (!introIncomplete) {
+        clearGeoIntroTimers(true);
+        return;
+      }
+
+      return;
     };
 
     const panel = panels[activePanelIndex];
     const highlights = panel?.geoHighlights;
 
     if (!highlights?.length) {
-      clearGeoIntroTimers();
+      clearGeoIntroTimers(true);
       setGeoReveal({ panelId: null, count: 0 });
-      return () => {
-        clearGeoIntroTimers();
-      };
+      return makeGeoIntroCleanup();
     }
 
     const panelId = panel.id;
 
     if (playedGeoIntroByPanelIdRef.current.has(panelId)) {
-      clearGeoIntroTimers();
+      clearGeoIntroTimers(true);
       setGeoReveal({ panelId, count: highlights.length });
-      return () => {
-        clearGeoIntroTimers();
-      };
+      return makeGeoIntroCleanup();
+    }
+
+    if (
+      sectionStickyEngaged &&
+      geoIntroStartedPanelIdsRef.current.has(panelId) &&
+      geoIntroArmedPanelIdRef.current !== panelId
+    ) {
+      clearGeoIntroTimers(true);
+      playedGeoIntroByPanelIdRef.current.add(panelId);
+      setGeoReveal({ panelId, count: highlights.length });
+      return makeGeoIntroCleanup();
     }
 
     if (!sectionStickyEngaged) {
-      clearGeoIntroTimers();
+      const armedId = geoIntroArmedPanelIdRef.current;
+      if (armedId && !playedGeoIntroByPanelIdRef.current.has(armedId)) {
+        return makeGeoIntroCleanup();
+      }
+      clearGeoIntroTimers(true);
       setGeoReveal({ panelId: null, count: 0 });
-      return () => {
-        clearGeoIntroTimers();
-      };
+      return makeGeoIntroCleanup();
     }
 
-    clearGeoIntroTimers();
+    if (
+      geoIntroArmedPanelIdRef.current === panelId &&
+      !playedGeoIntroByPanelIdRef.current.has(panelId) &&
+      geoIntroTimersRef.current.stagger.length > 0
+    ) {
+      return makeGeoIntroCleanup();
+    }
+
+    clearGeoIntroTimers(true);
     setGeoReveal({ panelId, count: 0 });
 
     const staggerMs = 780;
@@ -421,9 +477,7 @@ export const HorizontalScrollSection = () => {
       currentPanel.id !== targetPanelId ||
       playedGeoIntroByPanelIdRef.current.has(targetPanelId)
     ) {
-      return () => {
-        clearGeoIntroTimers();
-      };
+      return makeGeoIntroCleanup();
     }
 
     const len = currentPanel.geoHighlights.length;
@@ -431,6 +485,12 @@ export const HorizontalScrollSection = () => {
 
     for (let i = 0; i < len; i += 1) {
       const tid = window.setTimeout(() => {
+        if (!geoIntroMountedRef.current) {
+          return;
+        }
+        if (i === 0) {
+          geoIntroStartedPanelIdsRef.current.add(targetPanelId);
+        }
         setGeoReveal({ panelId: targetPanelId, count: i + 1 });
       }, initialDelayMs + i * staggerMs);
       staggerIds.push(tid);
@@ -439,10 +499,12 @@ export const HorizontalScrollSection = () => {
     const markPlayedAt =
       initialDelayMs + (len - 1) * staggerMs + GEO_INTRO_MARK_PLAYED_MS;
     const markPlayedId = window.setTimeout(() => {
-      if (panels[activePanelIndexRef.current]?.id !== targetPanelId) {
+      if (!geoIntroMountedRef.current) {
         return;
       }
       playedGeoIntroByPanelIdRef.current.add(targetPanelId);
+      geoIntroStartedPanelIdsRef.current.add(targetPanelId);
+      clearGeoIntroTimers(true);
       setGeoReveal((prev) =>
         prev.panelId === targetPanelId && prev.count === len
           ? { panelId: targetPanelId, count: len }
@@ -452,10 +514,9 @@ export const HorizontalScrollSection = () => {
     staggerIds.push(markPlayedId);
 
     geoIntroTimersRef.current.stagger = staggerIds;
+    geoIntroArmedPanelIdRef.current = targetPanelId;
 
-    return () => {
-      clearGeoIntroTimers();
-    };
+    return makeGeoIntroCleanup();
   }, [activePanelIndex, sectionStickyEngaged]);
 
   const scrollLinePercent = useMemo(() => {
@@ -800,8 +861,8 @@ export const HorizontalScrollSection = () => {
                     const playedIntro = playedGeoIntroByPanelIdRef.current.has(
                       panel.id
                     );
+                    /** Без «неактивный слайд = всё открыто» — иначе при смене progress/stagger обрывается визуально. */
                     const isRevealed =
-                      !isActiveGeoPanel ||
                       playedIntro ||
                       (geoReveal.panelId === panel.id &&
                         highlightIndex < geoReveal.count);

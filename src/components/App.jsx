@@ -5,6 +5,7 @@ import { ScrollRevealBlocks } from 'components/ScrollRevealBlocks';
 import { PinnedStorytellingSection } from 'components/PinnedStorytellingSection';
 import { DottedFlowSection } from 'components/DottedFlowSection';
 import { TerminalEchoSection } from 'components/TerminalEchoSection';
+import { SiteFooter } from 'components/SiteFooter';
 
 export const App = () => {
   return (
@@ -28,6 +29,7 @@ export const App = () => {
       <div id="terminal-echo">
         <TerminalEchoSection />
       </div>
+      <SiteFooter />
     </>
   );
 };

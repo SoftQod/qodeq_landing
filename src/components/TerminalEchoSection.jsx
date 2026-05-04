@@ -195,12 +195,178 @@ export const TerminalEchoSection = () => {
       style={{
         background: darkTheme.colors.background,
         color: darkTheme.colors.text,
-        padding: '0 6vw 110px',
+        padding: '0 6vw',
+        paddingBottom: 'clamp(72px, 12vh, 160px)',
         fontFamily: "Inter, 'Segoe UI', Arial, sans-serif"
       }}
     >
       <style>
         {`
+          .echo-section {
+            position: relative;
+            isolation: isolate;
+          }
+          .echo-section-content {
+            position: relative;
+            z-index: 1;
+          }
+          .echo-ascii-bg {
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            overflow: hidden;
+          }
+          .echo-ascii-block {
+            position: absolute;
+            margin: 0;
+            padding: 0;
+            font-family:
+              ui-monospace,
+              SFMono-Regular,
+              Menlo,
+              Monaco,
+              Consolas,
+              'Liberation Mono',
+              monospace;
+            font-size: clamp(11px, 1.45vw, 19px);
+            line-height: 1.38;
+            letter-spacing: 0.06em;
+            color: rgba(16, 163, 127, 0.09);
+            white-space: pre;
+            user-select: none;
+          }
+          .echo-ascii-block.echo-ascii-dim {
+            color: rgba(16, 163, 127, 0.055);
+            font-size: clamp(10px, 1.25vw, 16px);
+          }
+          .echo-ascii-block.echo-ascii-xl {
+            font-size: clamp(13px, 1.85vw, 24px);
+            letter-spacing: 0.07em;
+            color: rgba(16, 163, 127, 0.065);
+          }
+          .echo-ascii-band {
+            left: 0;
+            right: 0;
+            width: 100%;
+            text-align: center;
+            transform: none;
+            line-height: 1.5;
+          }
+          .echo-ascii-band-t {
+            top: 0;
+          }
+          .echo-ascii-band-b {
+            bottom: 2%;
+          }
+          .echo-ascii-rail {
+            top: 34%;
+            transform: translateY(-50%);
+            line-height: 1.55;
+            font-size: clamp(12px, 1.6vw, 20px);
+          }
+          .echo-ascii-rail-l {
+            left: clamp(4px, 1vw, 16px);
+          }
+          .echo-ascii-rail-r {
+            right: clamp(4px, 1vw, 16px);
+            text-align: right;
+          }
+          .echo-ascii-tl {
+            top: clamp(18px, 4vh, 72px);
+            left: clamp(8px, 2vw, 48px);
+            transform: rotate(-2.5deg);
+          }
+          .echo-ascii-tr {
+            top: clamp(26px, 5vh, 88px);
+            right: clamp(8px, 2vw, 44px);
+            text-align: right;
+            transform: rotate(2deg);
+          }
+          .echo-ascii-bl {
+            bottom: clamp(124px, 24vh, 270px);
+            left: clamp(10px, 2.8vw, 52px);
+            transform: rotate(-1.5deg);
+          }
+          .echo-ascii-br {
+            bottom: clamp(132px, 25vh, 280px);
+            right: clamp(8px, 2.5vw, 48px);
+            text-align: right;
+            transform: rotate(2.8deg);
+          }
+          .echo-ascii-q1 {
+            top: 10%;
+            left: 12%;
+            transform: rotate(-4deg);
+          }
+          .echo-ascii-q2 {
+            top: 14%;
+            right: 11%;
+            text-align: right;
+            transform: rotate(3deg);
+          }
+          .echo-ascii-q3 {
+            bottom: 54%;
+            left: 14%;
+            transform: rotate(-2deg);
+          }
+          .echo-ascii-q4 {
+            bottom: 50%;
+            right: 13%;
+            text-align: right;
+            transform: rotate(3.5deg);
+          }
+          .echo-ascii-centerpiece {
+            left: 50%;
+            top: 22%;
+            transform: translate(-50%, -50%) rotate(-0.5deg);
+            text-align: center;
+          }
+          .echo-ascii-scatter-a {
+            top: 4%;
+            left: 38%;
+            transform: rotate(-6deg);
+          }
+          .echo-ascii-scatter-b {
+            top: 32%;
+            left: 8%;
+            transform: rotate(5deg);
+          }
+          .echo-ascii-scatter-c {
+            top: 38%;
+            right: 9%;
+            left: auto;
+            text-align: right;
+            transform: rotate(-4deg);
+          }
+          .echo-ascii-scatter-d {
+            bottom: 68%;
+            left: 42%;
+            transform: rotate(2deg);
+          }
+          @media (max-width: 900px) {
+            .echo-ascii-centerpiece {
+              font-size: clamp(9px, 2.8vw, 14px) !important;
+            }
+            .echo-ascii-rail-l,
+            .echo-ascii-rail-r {
+              font-size: clamp(9px, 2.4vw, 13px);
+            }
+          }
+          @media (max-width: 700px) {
+            .echo-ascii-block {
+              font-size: clamp(8px, 2.6vw, 12px);
+              color: rgba(16, 163, 127, 0.085);
+            }
+            .echo-ascii-block.echo-ascii-dim {
+              font-size: clamp(7px, 2.2vw, 11px);
+            }
+            .echo-ascii-q2,
+            .echo-ascii-q4 {
+              opacity: 0.75;
+            }
+          }
+
           .echo-blink {
             animation: echoBlink 1s steps(1, end) infinite;
           }
@@ -356,6 +522,51 @@ export const TerminalEchoSection = () => {
             );
           }
 
+          .echo-section .echo-contact-lead {
+            margin: 0 0 22px;
+            padding: 16px 20px 17px;
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            border-left: 3px solid rgba(16, 163, 127, 0.88);
+            background: linear-gradient(
+              105deg,
+              rgba(16, 163, 127, 0.1) 0%,
+              rgba(16, 163, 127, 0.035) 40%,
+              transparent 76%
+            );
+            border-radius: 14px;
+            box-shadow:
+              inset 0 1px 0 rgba(255, 255, 255, 0.045),
+              0 10px 36px rgba(0, 0, 0, 0.22);
+          }
+          .echo-section .echo-contact-lead p {
+            margin: 0;
+            font-size: clamp(13px, 1.12vw, 15px);
+            line-height: 1.75;
+            letter-spacing: 0.01em;
+            color: rgba(236, 236, 236, 0.95);
+            text-wrap: balance;
+          }
+          .echo-section .echo-contact-k {
+            color: #10a37f;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            font-size: 1em;
+          }
+          .echo-section .echo-contact-hint {
+            color: rgba(172, 172, 172, 0.95);
+            font-weight: 400;
+            letter-spacing: 0.02em;
+            text-transform: none;
+            font-size: 0.98em;
+          }
+          .echo-section .echo-contact-outro {
+            color: rgba(142, 142, 142, 0.98);
+            font-weight: 400;
+            letter-spacing: 0.03em;
+          }
+
           @media (prefers-reduced-motion: reduce) {
             .echo-section .echo-submit:hover {
               transform: none;
@@ -370,7 +581,72 @@ export const TerminalEchoSection = () => {
           }
         `}
       </style>
-      <div style={{ margin: '0 auto', width: 'min(1320px, 100%)' }}>
+      <div className="echo-ascii-bg" aria-hidden="true">
+        <pre className="echo-ascii-block echo-ascii-band echo-ascii-band-t">{`═══════════════════════   // TERMINAL · ECHO · FEEDBACK   ═══════════════════════`}</pre>
+        <pre className="echo-ascii-block echo-ascii-dim echo-ascii-band echo-ascii-band-t" style={{ top: '1.2%' }}>{`···················································································`}</pre>
+        <pre className="echo-ascii-block echo-ascii-dim echo-ascii-band echo-ascii-band-b">{`···················································································`}</pre>
+        <pre className="echo-ascii-block echo-ascii-band echo-ascii-band-b" style={{ bottom: '5.5%' }}>{`═══════════════════════   ~ stream open · channel live ~   ═══════════════════════`}</pre>
+
+        <pre className="echo-ascii-block echo-ascii-rail echo-ascii-rail-l echo-ascii-dim">{`│
+│  //
+│  ||
+│  ~
+│  ||
+│  //
+│`}</pre>
+        <pre className="echo-ascii-block echo-ascii-rail echo-ascii-rail-r echo-ascii-dim">{`│
+│  \\\\
+│  ||
+│  ~
+│  ||
+│  \\\\
+│`}</pre>
+
+        <pre className="echo-ascii-block echo-ascii-xl echo-ascii-centerpiece">{`       ┌─────────────────────────────────────────┐
+       │   // Comments & Feedback · echo stream   │
+       │   > stdin open · stdout tee · live tail   │
+       └─────────────────────────────────────────┘`}</pre>
+
+        <pre className="echo-ascii-block echo-ascii-tl">{`// Comments & Feedback
+> stream · live · ACK
+  ┌─────────┐
+  │ ONLINE  │
+  └─────────┘`}</pre>
+        <pre className="echo-ascii-block echo-ascii-tr">{`   ~   ~   ~   ~   ~
+  .channel.multiplex.
+    · · · · · · ·
+      [PIPE]`}</pre>
+        <pre className="echo-ascii-block echo-ascii-bl">{`+---------------------------+
+| feedback.log · rotated    |
++---------------------------+
+ $ tail -f ./feedback · OK`}</pre>
+        <pre className="echo-ascii-block echo-ascii-br">{`   -----
+  ~ EOF ~
+   -----
+  [ flush ]
+   ······`}</pre>
+
+        <pre className="echo-ascii-block echo-ascii-dim echo-ascii-q1">{`/* echo */
+ ok = 1`}</pre>
+        <pre className="echo-ascii-block echo-ascii-dim echo-ascii-q2">{`  .route.
+ ~proxy~`}</pre>
+        <pre className="echo-ascii-block echo-ascii-dim echo-ascii-q3">{`+---+
+| ? |
++---+`}</pre>
+        <pre className="echo-ascii-block echo-ascii-dim echo-ascii-q4">{` ::: ACK :::`}</pre>
+
+        <pre className="echo-ascii-block echo-ascii-scatter-a">{`> _`}</pre>
+        <pre className="echo-ascii-block echo-ascii-dim echo-ascii-scatter-b">{`··· ··· ···`}</pre>
+        <pre className="echo-ascii-block echo-ascii-dim echo-ascii-scatter-c">{`~ batch ~`}</pre>
+        <pre className="echo-ascii-block echo-ascii-scatter-d">{`[ hex ]`}</pre>
+
+        <pre className="echo-ascii-block echo-ascii-dim" style={{ top: '42%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: 'clamp(9px, 1.1vw, 14px)' }}>{`────── ····· ────── ····· ────── ····· ──────`}</pre>
+        <pre className="echo-ascii-block echo-ascii-dim" style={{ top: '52%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: 'clamp(9px, 1.1vw, 14px)' }}>{`···· ═══════════════════════════════════════ ····`}</pre>
+      </div>
+      <div
+        className="echo-section-content"
+        style={{ margin: '0 auto', width: 'min(1320px, 100%)' }}
+      >
         <div
           style={{
             fontSize: 11,
@@ -601,18 +877,17 @@ export const TerminalEchoSection = () => {
           </div>
 
           <form onSubmit={handleContactSubmit} style={{ padding: '22px 20px 24px' }}>
-            <p
-              style={{
-                margin: '0 0 18px',
-                fontSize: 13,
-                lineHeight: 1.55,
-                color: darkTheme.colors.muted,
-                maxWidth: '52ch'
-              }}
-            >
-              Leave one way to reach you — email, Telegram (@handle or link), or phone — we will get
-              back to you.
-            </p>
+            <div className="echo-contact-lead" role="note">
+              <p>
+                Leave one way to reach you —{' '}
+                <span className="echo-contact-k">email</span>,{' '}
+                <span className="echo-contact-k">Telegram</span>
+                <span className="echo-contact-hint"> (@handle or link)</span>, or{' '}
+                <span className="echo-contact-k">phone</span>
+                {' — '}
+                <span className="echo-contact-outro">we will get back to you.</span>
+              </p>
+            </div>
 
             <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <span style={{ fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', color: darkTheme.colors.muted }}>
