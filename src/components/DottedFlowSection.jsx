@@ -62,17 +62,37 @@ export const DottedFlowSection = () => {
         padding: '72px 0 clamp(120px, 15vw, 220px)',
         fontFamily: "Inter, 'Segoe UI', Arial, sans-serif",
         width: '100%',
+        maxWidth: '100%',
+        boxSizing: 'border-box',
         overflowX: 'clip'
       }}
     >
-      <div
-        style={{
-          margin: '0 auto',
-          width: 'min(1760px, 100%)',
-          paddingInline: 'clamp(24px, 6vw, 96px)',
-          boxSizing: 'border-box'
-        }}
-      >
+        <style>{`
+          @media (max-width: 720px) {
+            .dotted-flow-title {
+              white-space: normal !important;
+            }
+            .dotted-flow-caption-wrap {
+              width: min(280px, 78vw) !important;
+            }
+          }
+          @media (max-width: 520px) {
+            .dotted-flow-heading {
+              font-size: clamp(22px, 6vw, 36px) !important;
+              letter-spacing: 0.05em !important;
+            }
+          }
+        `}</style>
+        <div
+          style={{
+            margin: '0 auto',
+            width: 'min(1760px, 100%)',
+            maxWidth: '100%',
+            minWidth: 0,
+            paddingInline: 'clamp(16px, 5vw, 96px)',
+            boxSizing: 'border-box'
+          }}
+        >
         <div
           style={{
             fontSize: 'clamp(11px, 1vw, 13px)',
@@ -85,13 +105,15 @@ export const DottedFlowSection = () => {
           Process Flow
         </div>
         <h2
+          className="dotted-flow-heading"
           style={{
             margin: 0,
             marginBottom: 'clamp(72px, 8vw, 168px)',
             fontSize: 'clamp(28px, 5vw, 82px)',
             fontWeight: 300,
             letterSpacing: '0.08em',
-            textTransform: 'uppercase'
+            textTransform: 'uppercase',
+            overflowWrap: 'break-word'
           }}
         >
           Dotted Integration Line
@@ -176,13 +198,15 @@ export const DottedFlowSection = () => {
                   }}
                 />
                 <div
+                  className="dotted-flow-caption-wrap"
                   style={{
                     position: 'absolute',
                     left: '50%',
                     transform: 'translateX(-50%)',
                     top: isTop ? 'auto' : 'clamp(36px, 4.5vw, 72px)',
                     bottom: isTop ? 'clamp(36px, 4.5vw, 72px)' : 'auto',
-                    width: 'clamp(200px, 22vw, 380px)',
+                    width: 'clamp(160px, 22vw, 380px)',
+                    maxWidth: 'min(380px, 92vw)',
                     opacity: isVisible ? 1 : 0,
                     filter: isVisible ? 'blur(0px)' : 'blur(4px)',
                     transition:
@@ -190,12 +214,14 @@ export const DottedFlowSection = () => {
                   }}
                 >
                   <div
+                    className="dotted-flow-title"
                     style={{
                       fontSize: 'clamp(14px, 1.85vw, 28px)',
                       letterSpacing: '0.08em',
                       textTransform: 'uppercase',
                       lineHeight: 1.3,
-                      whiteSpace: 'nowrap'
+                      whiteSpace: 'nowrap',
+                      overflowWrap: 'break-word'
                     }}
                   >
                     {point.title}

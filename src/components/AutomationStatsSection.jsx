@@ -306,7 +306,9 @@ export const AutomationStatsSection = () => {
         background: darkTheme.colors.background,
         overflow: 'hidden',
         fontFamily: "Inter, 'Segoe UI', Arial, sans-serif",
-        boxSizing: 'border-box'
+        boxSizing: 'border-box',
+        width: '100%',
+        maxWidth: '100%'
       }}
     >
       <style>
@@ -331,6 +333,24 @@ export const AutomationStatsSection = () => {
             margin: 0 auto;
             gap: clamp(10px, 1.8vw, 28px);
             box-sizing: border-box;
+          }
+          @media (max-width: 920px) {
+            .automation-rings__row {
+              flex-wrap: wrap;
+              justify-content: center;
+              row-gap: clamp(18px, 5vw, 36px);
+            }
+            .automation-rings__cell {
+              flex: 1 1 200px;
+              max-width: 440px;
+              width: 100%;
+            }
+          }
+          @media (max-width: 480px) {
+            .automation-rings__cell {
+              flex: 1 1 100%;
+              max-width: min(340px, 100%);
+            }
           }
           .automation-rings__cell {
             flex: 1 1 0;

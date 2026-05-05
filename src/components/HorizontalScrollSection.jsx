@@ -92,7 +92,9 @@ Key advantages:
 
 const sectionStyle = {
   position: 'relative',
-  background: darkTheme.colors.background
+  background: darkTheme.colors.background,
+  width: '100%',
+  maxWidth: '100%'
 };
 
 const stickyStyle = {
@@ -730,7 +732,13 @@ export const HorizontalScrollSection = () => {
             color: darkTheme.colors.primary,
             opacity: 1,
             animation: 'panelLabelIn 240ms ease-out',
-            pointerEvents: 'none'
+            pointerEvents: 'none',
+            maxWidth: isMobile ? 'min(340px, 88vw)' : isUpTo1100 ? 'min(520px, 90vw)' : '96vw',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            textAlign: 'center',
+            paddingInline: isMobile ? 8 : 12,
+            boxSizing: 'border-box'
           }}
         >
           {panels[activePanelIndex]?.title}

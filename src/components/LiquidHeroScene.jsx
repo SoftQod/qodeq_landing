@@ -181,6 +181,7 @@ export const LiquidHeroScene = () => {
   const isTablet = viewportWidth <= 1200;
   const isMobile = viewportWidth <= 900;
   const isSmallMobile = viewportWidth <= 640;
+  const isTinyMobile = viewportWidth <= 400;
 
   const heroTextMul = useMemo(() => {
     if (viewportWidth <= 900) {
@@ -189,6 +190,7 @@ export const LiquidHeroScene = () => {
     const growT = Math.min(1, Math.max(0, (viewportWidth - 520) / (2720 - 520)));
     return 0.62 + 0.38 * growT;
   }, [viewportWidth]);
+  const mobileLabelMul = isTinyMobile ? 0.52 : isSmallMobile ? 0.62 : viewportWidth <= 900 ? 0.78 : 1;
 
   useEffect(() => {
     const updateActiveAnchor = () => {
@@ -304,7 +306,23 @@ export const LiquidHeroScene = () => {
 
     /** Плавная разметка орбит от ширины (без «ступенек»). `spreadMul` — общее сжатие из resize(). */
     const getSatelliteConfigs = (width, spreadMul = 1) => {
-      const w = THREE.MathUtils.clamp(width, 360, 2160);
+      const w = THREE.MathUtils.clamp(width, 280, 2160);
+      if (w <= 900) {
+        /* Не умножаем на orbitSpreadMul — на узких экранах он ~0.56 и сливает шары в кучу (iPhone SE). */
+        const uw = THREE.MathUtils.clamp(width, 320, 900);
+        const mobileT = THREE.MathUtils.clamp((uw - 320) / 580, 0, 1);
+        /* Равный шаг между соседними спутниками: x ∈ { -1.5s, -0.5s, 0.5s, 1.5s } */
+        const step = THREE.MathUtils.lerp(0.66, 0.48, mobileT);
+        const xs = [-1.5 * step, -0.5 * step, 0.5 * step, 1.5 * step];
+        const lineY =
+          uw <= 400 ? -1.14 : uw <= 640 ? -1.02 : -0.82;
+        return [
+          { x: xs[0], yOffset: lineY, timePhase: 0.9, rotSign: 1 },
+          { x: xs[1], yOffset: lineY, timePhase: 1.4, rotSign: -1 },
+          { x: xs[2], yOffset: lineY, timePhase: 1.1, rotSign: -1 },
+          { x: xs[3], yOffset: lineY, timePhase: 1.6, rotSign: 1 }
+        ];
+      }
       const layoutT = THREE.MathUtils.clamp((w - 380) / 1060, 0, 1);
       let xOuter = THREE.MathUtils.lerp(0.98, 1.86, layoutT) * spreadMul;
       let ySpread = THREE.MathUtils.lerp(0.34, 0.56, layoutT) * spreadMul;
@@ -536,7 +554,14 @@ export const LiquidHeroScene = () => {
       const pulse = 1 + Math.sin(time * 0.00045) * 0.01;
       const introRaw = THREE.MathUtils.clamp((time - startTime) / 1800, 0, 1);
       const intro = easeOutCubic(introRaw);
-      const mainY = -0.26 + intro * 0.32 + Math.sin(time * 0.00028) * 0.03;
+      const vw = window.innerWidth || 1440;
+      const isMobileViewport = vw <= 900;
+      const isTinyVp = vw <= 400;
+      /* На мобилке главный шар ближе к центру кадра (под заголовок по центру). */
+      const mainBaseY = isTinyVp ? 0.02 : isMobileViewport ? -0.06 : -0.26;
+      const mainRise = isTinyVp ? 0.28 : isMobileViewport ? 0.3 : 0.32;
+      const mainFloat = isTinyVp ? 0.012 : isMobileViewport ? 0.014 : 0.03;
+      const mainY = mainBaseY + intro * mainRise + Math.sin(time * 0.00028) * mainFloat;
 
       const smoothSpeed = 22;
       const smoothAlpha = 1 - Math.exp(-smoothSpeed * dt);
@@ -564,15 +589,19 @@ export const LiquidHeroScene = () => {
         sat.geometry.computeVertexNormals();
 
         const satMesh = satelliteMeshes[index];
-        const extraDriftY = Math.sin(time * 0.0003 + sat.timePhase) * 0.018;
-        const driftZ = Math.cos(time * 0.00026 + sat.timePhase * 0.8) * 0.04;
+        const driftMul = isTinyVp ? 0.35 : isMobileViewport ? 0.55 : 1;
+        const extraDriftY = Math.sin(time * 0.0003 + sat.timePhase) * 0.018 * driftMul;
+        const driftZ = Math.cos(time * 0.00026 + sat.timePhase * 0.8) * 0.04 * driftMul;
         const verticalOffset = satelliteConfigs[index].yOffset;
-        satMesh.position.x = satelliteConfigs[index].x + Math.sin(time * 0.00018 + index) * 0.02;
+        const xWobble = isTinyVp ? 0.004 : isMobileViewport ? 0.008 : 0.02;
+        satMesh.position.x =
+          satelliteConfigs[index].x + (isMobileViewport ? 0 : Math.sin(time * 0.00018 + index) * xWobble);
         satMesh.position.y = mainY + verticalOffset + extraDriftY;
         satMesh.position.z = 0.04 + driftZ;
         satMesh.rotation.y += dt * 0.12 * sat.rotSign;
         satMesh.rotation.x += dt * 0.06;
-        satMesh.scale.setScalar((0.72 + intro * 0.28) * 0.42 * pulse * orbitScale.sat);
+        const satMobileScale = isTinyVp ? 0.33 : isMobileViewport ? 0.36 : 0.42;
+        satMesh.scale.setScalar((0.72 + intro * 0.28) * satMobileScale * pulse * orbitScale.sat);
       });
 
       const labelLayerEl = labelLayerRef.current;
@@ -610,14 +639,19 @@ export const LiquidHeroScene = () => {
         const y =
           (-labelWorld.y * 0.5 + 0.5) * canvasRect.height + canvasRect.top - layerRect.top;
 
-        labelEl.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`;
+        const labelBelowPx = isTinyVp ? 18 : isMobileViewport ? 14 : 0;
+        labelEl.style.transform =
+          labelBelowPx > 0
+            ? `translate3d(${x}px, ${y + labelBelowPx}px, 0) translate(-50%, 0)`
+            : `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`;
       }
 
       mesh.rotation.y += dt * 0.1;
       mesh.rotation.x += dt * 0.05;
-      mesh.position.x = Math.sin(time * 0.00022) * 0.03;
+      mesh.position.x = isMobileViewport ? 0 : Math.sin(time * 0.00022) * 0.03;
       mesh.position.y = mainY;
-      mesh.scale.setScalar((0.76 + intro * 0.24) * pulse * orbitScale.main);
+      const mainScaleBase = isTinyVp ? 0.88 : isMobileViewport ? 0.92 : 1;
+      mesh.scale.setScalar((0.76 + intro * 0.24) * pulse * orbitScale.main * mainScaleBase);
       material.opacity = intro;
 
       revealCenteredTitle(titleRef.current, (introRaw - 0.2) / 0.8);
@@ -659,7 +693,8 @@ export const LiquidHeroScene = () => {
             id={`hero-sat-label-${index}`}
             style={{
               ...satelliteLabelBaseStyle,
-              fontSize: `clamp(${Math.round(10 * heroTextMul)}px, ${(1.2 * heroTextMul).toFixed(2)}vw, ${Math.round(20 * heroTextMul)}px)`
+              letterSpacing: isTinyMobile ? '0.22em' : satelliteLabelBaseStyle.letterSpacing,
+              fontSize: `clamp(${Math.round(9 * heroTextMul * mobileLabelMul)}px, ${(1 * heroTextMul * mobileLabelMul).toFixed(2)}vw, ${Math.round(14 * heroTextMul * mobileLabelMul)}px)`
             }}
           >
             {text}
@@ -745,13 +780,24 @@ export const LiquidHeroScene = () => {
           style={{
             ...titleStyle,
             opacity: 0,
-            top: isMobile ? (isSmallMobile ? '46%' : '48%') : titleStyle.top,
-            letterSpacing: isMobile ? (isSmallMobile ? '0.18em' : '0.24em') : titleStyle.letterSpacing,
+            top: isMobile ? '50%' : titleStyle.top,
+            letterSpacing: isMobile
+              ? isTinyMobile
+                ? '0.16em'
+                : isSmallMobile
+                  ? '0.18em'
+                  : '0.22em'
+              : titleStyle.letterSpacing,
             fontSize: isMobile
-              ? isSmallMobile
-                ? 'clamp(30px, 13vw, 54px)'
-                : 'clamp(34px, 10vw, 70px)'
-              : `clamp(${Math.round(26 * heroTextMul)}px, ${(8.5 * heroTextMul).toFixed(2)}vw, ${Math.round(92 * heroTextMul)}px)`
+              ? isTinyMobile
+                ? 'clamp(22px, 6.2vw, 34px)'
+                : isSmallMobile
+                  ? 'clamp(24px, 6.8vw, 38px)'
+                  : 'clamp(26px, 6.2vw, 44px)'
+              : `clamp(${Math.round(26 * heroTextMul)}px, ${(8.5 * heroTextMul).toFixed(2)}vw, ${Math.round(92 * heroTextMul)}px)`,
+            paddingInline: isMobile ? 'max(12px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-right))' : 0,
+            maxWidth: isMobile ? 'min(100%, 100vw - 24px)' : undefined,
+            boxSizing: 'border-box'
           }}
         >
           QODEQ
@@ -764,10 +810,10 @@ export const LiquidHeroScene = () => {
             position: 'relative',
             transform: 'translateY(24px)',
             filter: 'blur(8px)',
-            fontSize: isMobile ? '9px' : `${Math.max(8, Math.round(10 * heroTextMul))}px`,
-            letterSpacing: isMobile ? '0.16em' : subtitleStyle.letterSpacing,
+            fontSize: isMobile ? (isTinyMobile ? '7px' : isSmallMobile ? '7.5px' : '8.25px') : `${Math.max(8, Math.round(10 * heroTextMul))}px`,
+            letterSpacing: isMobile ? (isTinyMobile ? '0.1em' : isSmallMobile ? '0.12em' : '0.14em') : subtitleStyle.letterSpacing,
             textAlign: 'center',
-            paddingInline: isMobile ? '20px' : 0
+            paddingInline: isMobile ? (isTinyMobile ? '14px' : '18px') : 0
           }}
         >
           Qodeq - AI platform automating operations in iGaming
@@ -782,9 +828,13 @@ export const LiquidHeroScene = () => {
             position: 'relative',
             transform: 'translateY(42px)',
             filter: 'blur(6px)',
-            fontSize: isMobile ? buttonStyle.fontSize : `${Math.max(9, Math.round(11 * heroTextMul))}px`,
+            fontSize: isMobile ? (isTinyMobile ? '9px' : isSmallMobile ? '9.5px' : '10.25px') : `${Math.max(9, Math.round(11 * heroTextMul))}px`,
             padding: isMobile
-              ? buttonStyle.padding
+              ? isTinyMobile
+                ? '8px 18px'
+                : isSmallMobile
+                  ? '8px 20px'
+                  : '9px 22px'
               : `${Math.round(10 * heroTextMul)}px ${Math.round(26 * heroTextMul)}px`,
             boxShadow: isButtonHover ? '0 0 24px rgba(16,163,127,0.28)' : '0 0 0 rgba(0,0,0,0)',
             borderColor: isButtonHover ? darkTheme.colors.accentHover : darkTheme.colors.border,

@@ -93,25 +93,63 @@ export const SiteFooter = () => {
 
   return (
     <footer
+      className="site-footer-root"
       style={{
         background: theme.bg,
         color: theme.text,
         fontFamily: "Inter, 'Segoe UI', Arial, sans-serif",
-        padding: '0 clamp(18px, 3.5vw, 56px) clamp(20px, 3vw, 32px)',
-        marginTop: 'auto'
+        padding: '0 clamp(14px, 4vw, 56px) clamp(20px, 3vw, 32px)',
+        marginTop: 'auto',
+        width: '100%',
+        maxWidth: '100vw',
+        boxSizing: 'border-box',
+        overflowX: 'hidden'
       }}
     >
+      <style>{`
+        .site-footer-root * {
+          box-sizing: border-box;
+        }
+        @media (max-width: 720px) {
+          .site-footer-main-grid {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            gap: clamp(28px, 7vw, 40px) !important;
+            padding-left: max(12px, env(safe-area-inset-left)) !important;
+            padding-right: max(12px, env(safe-area-inset-right)) !important;
+          }
+          .site-footer-brand-title {
+            letter-spacing: clamp(0.18em, 3vw, 0.32em) !important;
+          }
+          .site-footer-legal-row {
+            flex-direction: column !important;
+            gap: 12px !important;
+          }
+          .site-footer-legal-cluster {
+            flex-direction: column !important;
+            gap: 8px !important;
+          }
+          .site-footer-mail {
+            max-width: 100%;
+            overflow-wrap: anywhere;
+          }
+        }
+      `}</style>
       <div style={accentRuleStyle} aria-hidden="true" />
 
       <div
+        className="site-footer-main-grid"
         style={{
           margin: '0 auto',
           width: 'min(1100px, 100%)',
+          maxWidth: '100%',
+          minWidth: 0,
           paddingTop: 'clamp(48px, 6.5vw, 80px)',
           paddingLeft: 'clamp(12px, 3vw, 24px)',
           paddingRight: 'clamp(12px, 3vw, 24px)',
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))',
           gap: 'clamp(36px, 6vw, 72px)',
           alignItems: 'stretch',
           justifyItems: 'stretch',
@@ -119,15 +157,17 @@ export const SiteFooter = () => {
         }}
       >
         <div style={footerColumnShellStyle}>
-          <div style={{ maxWidth: '36rem', width: '100%' }}>
+          <div style={{ maxWidth: '36rem', width: '100%', minWidth: 0 }}>
           <p
+            className="site-footer-brand-title"
             style={{
               margin: 0,
-              fontSize: 'clamp(20px, 3vw, 28px)',
+              fontSize: 'clamp(18px, 4.5vw, 28px)',
               fontWeight: 300,
-              letterSpacing: '0.42em',
+              letterSpacing: 'clamp(0.22em, 3.5vw, 0.42em)',
               textTransform: 'uppercase',
-              color: theme.text
+              color: theme.text,
+              overflowWrap: 'break-word'
             }}
           >
             QODEQ
@@ -136,10 +176,12 @@ export const SiteFooter = () => {
             style={{
               margin: '18px auto 0',
               maxWidth: '36rem',
+              width: '100%',
               fontSize: 'clamp(13px, 1.15vw, 15px)',
               lineHeight: 1.65,
               color: theme.muted,
-              fontWeight: 400
+              fontWeight: 400,
+              overflowWrap: 'break-word'
             }}
           >
             AI platform automating operations in iGaming — product-aligned experience.
@@ -148,7 +190,7 @@ export const SiteFooter = () => {
         </div>
 
         <div style={footerColumnShellStyle}>
-        <nav aria-label="Section shortcuts" style={{ width: '100%', maxWidth: '520px' }}>
+        <nav aria-label="Section shortcuts" style={{ width: '100%', maxWidth: '520px', minWidth: 0 }}>
           <p
             style={{
               margin: '0 0 18px',
@@ -207,7 +249,7 @@ export const SiteFooter = () => {
         </div>
 
         <div style={footerColumnShellStyle}>
-        <nav aria-label="Social links" style={{ width: '100%', maxWidth: '420px' }}>
+        <nav aria-label="Social links" style={{ width: '100%', maxWidth: '420px', minWidth: 0 }}>
           <p
             style={{
               margin: '0 0 14px',
@@ -257,9 +299,12 @@ export const SiteFooter = () => {
       </div>
 
       <div
+        className="site-footer-legal-row"
         style={{
           margin: 'clamp(48px, 7vw, 88px) auto 0',
           width: 'min(1100px, 100%)',
+          maxWidth: '100%',
+          minWidth: 0,
           paddingLeft: 'clamp(12px, 3vw, 24px)',
           paddingRight: 'clamp(12px, 3vw, 24px)',
           paddingTop: 'clamp(26px, 3.5vw, 36px)',
@@ -269,16 +314,20 @@ export const SiteFooter = () => {
           alignItems: 'center',
           justifyContent: 'center',
           textAlign: 'center',
-          gap: '14px 24px'
+          gap: '14px 24px',
+          boxSizing: 'border-box'
         }}
       >
         <div
+          className="site-footer-legal-cluster"
           style={{
             display: 'flex',
             flexWrap: 'wrap',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '10px 14px'
+            gap: '10px 14px',
+            maxWidth: '100%',
+            minWidth: 0
           }}
         >
           <p style={{ margin: 0, fontSize: 'clamp(11px, 1vw, 12px)', letterSpacing: '0.06em', color: theme.muted }}>
@@ -331,13 +380,15 @@ export const SiteFooter = () => {
           </nav>
         </div>
         <a
+          className="site-footer-mail"
           href={`mailto:${CONTACT_EMAIL}`}
           style={{
             fontSize: 'clamp(11px, 1vw, 12px)',
             letterSpacing: '0.12em',
             color: theme.accent,
             textDecoration: 'none',
-            transition: 'color 180ms ease'
+            transition: 'color 180ms ease',
+            textAlign: 'center'
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.color = theme.accentHover;

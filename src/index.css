@@ -1,5 +1,7 @@
 @import-normalize; /* bring in normalize.css styles */
 
+/* Не задаём overflow-x на html/body: это ломает position:sticky у Horizontal Flow и Story. */
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',

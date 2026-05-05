@@ -195,9 +195,13 @@ export const TerminalEchoSection = () => {
       style={{
         background: darkTheme.colors.background,
         color: darkTheme.colors.text,
-        padding: '0 6vw',
+        padding: '0 clamp(14px, 5vw, 6vw)',
         paddingBottom: 'clamp(72px, 12vh, 160px)',
-        fontFamily: "Inter, 'Segoe UI', Arial, sans-serif"
+        fontFamily: "Inter, 'Segoe UI', Arial, sans-serif",
+        width: '100%',
+        maxWidth: '100%',
+        boxSizing: 'border-box',
+        overflowX: 'hidden'
       }}
     >
       <style>
@@ -205,6 +209,7 @@ export const TerminalEchoSection = () => {
           .echo-section {
             position: relative;
             isolation: isolate;
+            overflow-x: clip;
           }
           .echo-section-content {
             position: relative;
@@ -832,7 +837,8 @@ export const TerminalEchoSection = () => {
               gap: 8,
               padding: '14px 16px',
               borderBottom: `1px solid ${darkTheme.colors.border}`,
-              flexWrap: 'nowrap',
+              flexWrap: 'wrap',
+              rowGap: 8,
               columnGap: 12
             }}
           >

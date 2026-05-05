@@ -15,18 +15,23 @@ const darkTheme = {
   }
 };
 
-const sectionStyle = {
+const sectionStyleBase = {
   minHeight: '100vh',
   background: darkTheme.colors.background,
   color: darkTheme.colors.primary,
   padding: '10vh 7vw 8vh',
   boxSizing: 'border-box',
   display: 'flex',
-  alignItems: 'center'
+  alignItems: 'center',
+  width: '100%',
+  maxWidth: '100vw',
+  overflowX: 'hidden'
 };
 
 const contentWrapStyle = {
-  width: '100%'
+  width: '100%',
+  maxWidth: '100%',
+  minWidth: 0
 };
 
 const headingStyle = {
@@ -49,7 +54,7 @@ const subtitleStyle = {
   lineHeight: 1.8
 };
 
-const gridStyle = {
+const gridStyleBase = {
   display: 'grid',
   gap: '22px',
   gridTemplateColumns: 'repeat(6, minmax(0, 1fr))'
@@ -62,7 +67,8 @@ const cardBaseStyle = {
   minHeight: '200px',
   padding: '26px',
   backdropFilter: 'blur(1.5px)',
-  transition: 'transform 650ms cubic-bezier(0.2, 0.9, 0.2, 1), opacity 650ms ease, border-color 520ms ease, box-shadow 700ms ease'
+  transition: 'transform 650ms cubic-bezier(0.2, 0.9, 0.2, 1), opacity 650ms ease, border-color 520ms ease, box-shadow 700ms ease',
+  minWidth: 0
 };
 
 const cards = [
@@ -94,11 +100,23 @@ const cards = [
 ];
 
 export const ScrollRevealBlocks = () => {
+  const [viewportWidth, setViewportWidth] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth : 1200
+  );
   const [visibleMap, setVisibleMap] = useState(() => cards.map(() => false));
   const [introVisible, setIntroVisible] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const refs = useRef([]);
   const introRef = useRef(null);
+
+  const isCompact = viewportWidth <= 560;
+  const isTabletGrid = viewportWidth <= 900 && !isCompact;
+
+  useEffect(() => {
+    const onResize = () => setViewportWidth(window.innerWidth || 1200);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -164,6 +182,8 @@ export const ScrollRevealBlocks = () => {
                 ? '2 / span 2'
                 : '4 / span 2'
             : 'span 2';
+        const useDesktopPlacement = viewportWidth > 900;
+        const gridColumnPlacement = useDesktopPlacement ? centeredSecondRowPlacement : 'auto';
         return (
           <article
             key={card.title}
@@ -175,10 +195,13 @@ export const ScrollRevealBlocks = () => {
             onMouseLeave={() => setActiveIndex(-1)}
             style={{
               ...cardBaseStyle,
+              padding: isCompact ? '18px 16px' : isTabletGrid ? '22px 20px' : cardBaseStyle.padding,
+              minHeight: isCompact ? 'auto' : isTabletGrid ? 'min(200px, auto)' : cardBaseStyle.minHeight,
+              borderRadius: isCompact ? '16px' : cardBaseStyle.borderRadius,
               opacity: isVisible ? 1 : 0,
               transform: isVisible
                 ? `translateY(0px) scale(${isActive ? 1.015 : 1})`
-                : 'translateY(52px) scale(0.985)',
+                : `${isCompact ? 'translateY(28px)' : 'translateY(52px)'} scale(0.985)`,
               transition: `${transitionOpacity}, ${transitionEnter}`,
               transitionDelay: isVisible ? '0ms' : `${index * 130}ms`,
               borderColor: isActive
@@ -187,19 +210,28 @@ export const ScrollRevealBlocks = () => {
               boxShadow: isActive
                 ? '0 16px 50px rgba(16,163,127,0.22)'
                 : '0 10px 28px rgba(0,0,0,0.35)',
-              gridColumn: centeredSecondRowPlacement
+              gridColumn: gridColumnPlacement
             }}
           >
-            <div style={{ fontSize: '12px', color: darkTheme.colors.muted, letterSpacing: '0.22em' }}>
+            <div
+              style={{
+                fontSize: isCompact ? '11px' : '12px',
+                color: darkTheme.colors.muted,
+                letterSpacing: isCompact ? '0.18em' : '0.22em'
+              }}
+            >
               {card.metric}
             </div>
             <h3
               style={{
-                margin: '12px 0 10px',
-                fontSize: 'clamp(24px, 2.6vw, 36px)',
+                margin: isCompact ? '10px 0 8px' : '12px 0 10px',
+                fontSize: isCompact
+                  ? 'clamp(18px, 5vw, 26px)'
+                  : 'clamp(20px, 3vw, 36px)',
                 fontWeight: 300,
-                letterSpacing: '0.12em',
-                textTransform: 'uppercase'
+                letterSpacing: isCompact ? '0.08em' : '0.12em',
+                textTransform: 'uppercase',
+                overflowWrap: 'break-word'
               }}
             >
               {card.title}
@@ -208,8 +240,9 @@ export const ScrollRevealBlocks = () => {
               style={{
                 margin: 0,
                 color: darkTheme.colors.secondary,
-                lineHeight: 1.65,
-                fontSize: 'clamp(16px, 1.4vw, 20px)'
+                lineHeight: isCompact ? 1.55 : 1.65,
+                fontSize: isCompact ? 'clamp(14px, 3.8vw, 16px)' : 'clamp(15px, 1.5vw, 20px)',
+                overflowWrap: 'break-word'
               }}
             >
               {card.text}
@@ -217,8 +250,29 @@ export const ScrollRevealBlocks = () => {
           </article>
         );
       }),
-    [activeIndex, visibleMap]
+    [activeIndex, isCompact, isTabletGrid, viewportWidth, visibleMap]
   );
+
+  const sectionStyle = {
+    ...sectionStyleBase,
+    padding: isCompact
+      ? 'clamp(36px, 10vw, 56px) clamp(14px, 4vw, 22px) clamp(28px, 8vw, 48px)'
+      : isTabletGrid
+        ? 'clamp(48px, 9vh, 10vh) clamp(18px, 5vw, 6vw) clamp(40px, 7vh, 8vh)'
+        : sectionStyleBase.padding,
+    alignItems: isCompact ? 'flex-start' : 'center',
+    minHeight: isCompact ? 'unset' : sectionStyleBase.minHeight
+  };
+
+  const gridStyle = {
+    ...gridStyleBase,
+    gap: isCompact ? '14px' : isTabletGrid ? '18px' : gridStyleBase.gap,
+    gridTemplateColumns: isCompact
+      ? 'minmax(0, 1fr)'
+      : isTabletGrid
+        ? 'repeat(2, minmax(0, 1fr))'
+        : gridStyleBase.gridTemplateColumns
+  };
 
   return (
     <section style={sectionStyle}>
@@ -227,10 +281,18 @@ export const ScrollRevealBlocks = () => {
           ref={introRef}
           style={{
             ...headingStyle,
+            marginBottom: isCompact ? '10px' : isTabletGrid ? '12px' : headingStyle.marginBottom,
+            fontSize: isCompact
+              ? 'clamp(26px, 7vw, 40px)'
+              : isTabletGrid
+                ? 'clamp(28px, 5vw, 52px)'
+                : headingStyle.fontSize,
+            letterSpacing: isCompact ? '0.05em' : isTabletGrid ? '0.065em' : headingStyle.letterSpacing,
             opacity: introVisible ? 1 : 0,
             transform: introVisible ? 'translateY(0px)' : 'translateY(42px)',
             filter: introVisible ? 'blur(0px)' : 'blur(8px)',
-            transition: 'opacity 700ms ease, transform 800ms cubic-bezier(0.2, 0.9, 0.2, 1), filter 700ms ease'
+            transition: 'opacity 700ms ease, transform 800ms cubic-bezier(0.2, 0.9, 0.2, 1), filter 700ms ease',
+            overflowWrap: 'break-word'
           }}
         >
           Why Qodeq
@@ -238,6 +300,10 @@ export const ScrollRevealBlocks = () => {
         <p
           style={{
             ...subtitleStyle,
+            marginBottom: isCompact ? '24px' : isTabletGrid ? '36px' : subtitleStyle.marginBottom,
+            fontSize: isCompact ? 'clamp(12px, 3.2vw, 14px)' : isTabletGrid ? 'clamp(13px, 1.8vw, 15px)' : subtitleStyle.fontSize,
+            lineHeight: isCompact ? 1.65 : subtitleStyle.lineHeight,
+            maxWidth: isCompact ? '100%' : subtitleStyle.maxWidth,
             opacity: introVisible ? 1 : 0,
             transform: introVisible ? 'translateY(0px)' : 'translateY(34px)',
             filter: introVisible ? 'blur(0px)' : 'blur(6px)',

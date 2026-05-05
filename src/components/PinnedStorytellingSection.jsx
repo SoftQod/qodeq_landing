@@ -79,10 +79,20 @@ const cardStackStyle = {
 
 export const PinnedStorytellingSection = () => {
   const sectionRef = useRef(null);
+  const [viewportWidth, setViewportWidth] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth : 1200
+  );
   const [progress, setProgress] = useState(0);
   const [introVisible, setIntroVisible] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollPerStepVh = 46;
+  const isNarrow = viewportWidth <= 900;
+
+  useEffect(() => {
+    const onResize = () => setViewportWidth(window.innerWidth || 1200);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   useEffect(() => {
     let rafId = 0;
@@ -153,21 +163,49 @@ export const PinnedStorytellingSection = () => {
     setActiveIndex(progressIndex);
   }, [progressIndex]);
 
+  const stickyStyleResponsive = isNarrow
+    ? {
+        ...stickyStyle,
+        gridTemplateColumns: '1fr',
+        gap: 'clamp(18px, 5vw, 28px)',
+        padding: 'clamp(14px, 4vw, 22px) clamp(14px, 4vw, 22px)',
+        alignItems: 'stretch'
+      }
+    : stickyStyle;
+
+  const leftColumnResponsive = isNarrow ? { ...leftColumnStyle, maxWidth: '100%', minWidth: 0 } : leftColumnStyle;
+
+  const visualCardResponsive = isNarrow
+    ? {
+        ...visualCardStyle,
+        padding: 'clamp(18px, 4vw, 28px)',
+        minHeight: 'clamp(220px, 38vh, 360px)',
+        borderRadius: '18px'
+      }
+    : visualCardStyle;
+
+  const cardStackResponsive = isNarrow
+    ? { ...cardStackStyle, minHeight: 'clamp(220px, 38vh, 360px)' }
+    : cardStackStyle;
+
   return (
     <section
       ref={sectionRef}
       style={{
         ...sectionStyle,
-        height: `calc(100vh + ${(steps.length - 1) * scrollPerStepVh}vh)`
+        height: `calc(100vh + ${(steps.length - 1) * scrollPerStepVh}vh)`,
+        width: '100%',
+        maxWidth: '100%',
+        boxSizing: 'border-box'
       }}
     >
       <div
         className={`story-intro-animate ${introVisible ? 'is-visible' : ''}`}
-        style={stickyStyle}
+        style={stickyStyleResponsive}
       >
         <div
           className={`story-col-left ${introVisible ? 'is-visible' : ''}`}
-          style={leftColumnStyle}
+          style={leftColumnResponsive}
         >
           <div style={{ fontSize: 12, letterSpacing: '0.22em', opacity: 0.56 }}>
             AUDIENCE
@@ -178,7 +216,8 @@ export const PinnedStorytellingSection = () => {
               fontSize: 'clamp(30px, 6vw, 76px)',
               fontWeight: 300,
               letterSpacing: '0.08em',
-              textTransform: 'uppercase'
+              textTransform: 'uppercase',
+              overflowWrap: 'break-word'
             }}
           >
             Who is it for
@@ -211,7 +250,7 @@ export const PinnedStorytellingSection = () => {
                   style={{
                     border: '1px solid rgba(255,255,255,0.14)',
                     borderRadius: 16,
-                    padding: '16px 18px',
+                    padding: isNarrow ? '14px 14px' : '16px 18px',
                     borderColor: isActive ? darkTheme.colors.accent : darkTheme.colors.border,
                     background: isActive ? darkTheme.colors.hover : darkTheme.colors.surface,
                     opacity: isActive ? 1 : 0.52,
@@ -226,9 +265,10 @@ export const PinnedStorytellingSection = () => {
                   <div
                     style={{
                       marginTop: 6,
-                      fontSize: 'clamp(18px, 2vw, 26px)',
+                      fontSize: 'clamp(16px, 3.8vw, 26px)',
                       textTransform: 'uppercase',
-                      letterSpacing: '0.11em'
+                      letterSpacing: isNarrow ? '0.06em' : '0.11em',
+                      overflowWrap: 'break-word'
                     }}
                   >
                     {step.title}
@@ -240,16 +280,16 @@ export const PinnedStorytellingSection = () => {
         </div>
         <div
           className={`story-col-right ${introVisible ? 'is-visible' : ''}`}
-          style={rightColumnStyle}
+          style={{ ...rightColumnStyle, minWidth: 0 }}
         >
-          <div style={cardStackStyle}>
+          <div style={cardStackResponsive}>
             {steps.map((step, index) => {
               const isActive = index === activeIndex;
               return (
                 <article
                   key={step.id}
                   style={{
-                    ...visualCardStyle,
+                    ...visualCardResponsive,
                     position: 'absolute',
                     inset: 0,
                     opacity: isActive ? 1 : 0,
