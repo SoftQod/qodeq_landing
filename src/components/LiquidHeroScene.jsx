@@ -24,7 +24,7 @@ const containerStyle = {
   background: darkTheme.colors.background
 };
 
-const canvasStyle = {
+const canvasStyleBase = {
   position: 'absolute',
   inset: 0,
   width: '100%',
@@ -32,6 +32,7 @@ const canvasStyle = {
   display: 'block',
   // Needed for raycasting / hover on the 3D scene (HTML overlays are pointer-events: none)
   pointerEvents: 'auto',
+  /* На таче none блокирует вертикальный скролл страницы по Canvas */
   touchAction: 'none'
 };
 
@@ -138,6 +139,9 @@ const satelliteLabelBaseStyle = {
   left: 0,
   top: 0,
   margin: 0,
+  width: 'max-content',
+  maxWidth: 'min(92vw, 280px)',
+  textAlign: 'center',
   fontWeight: 300,
   letterSpacing: '0.36em',
   textTransform: 'uppercase',
@@ -302,7 +306,11 @@ export const LiquidHeroScene = () => {
     });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.position.y = 0.06;
+    mesh.renderOrder = 0;
     scene.add(mesh);
+
+    /** Отдельный инстанс материала (те же цвет/шероховатость, что у центра), чтобы корректно dispose без общих побочных эффектов */
+    const satMaterial = material.clone();
 
     /** Плавная разметка орбит от ширины (без «ступенек»). `spreadMul` — общее сжатие из resize(). */
     const getSatelliteConfigs = (width, spreadMul = 1) => {
@@ -311,26 +319,29 @@ export const LiquidHeroScene = () => {
         /* Не умножаем на orbitSpreadMul — на узких экранах он ~0.56 и сливает шары в кучу (iPhone SE). */
         const uw = THREE.MathUtils.clamp(width, 320, 900);
         const mobileT = THREE.MathUtils.clamp((uw - 320) / 580, 0, 1);
-        /* Равный шаг между соседними спутниками: x ∈ { -1.5s, -0.5s, 0.5s, 1.5s } */
-        const step = THREE.MathUtils.lerp(0.66, 0.48, mobileT);
-        const xs = [-1.5 * step, -0.5 * step, 0.5 * step, 1.5 * step];
-        const lineY =
-          uw <= 400 ? -1.14 : uw <= 640 ? -1.02 : -0.82;
+        /* Два шара сверху, два снизу. Узкий экран — больше half (раньше уменьшали → шары наезжали друг на друга). */
+        const half = THREE.MathUtils.lerp(0.72, 0.90, mobileT);
+        const yTop = THREE.MathUtils.lerp(1.12, 0.94, mobileT);
+        const yBottom = THREE.MathUtils.lerp(-1.22, -1.04, mobileT);
         return [
-          { x: xs[0], yOffset: lineY, timePhase: 0.9, rotSign: 1 },
-          { x: xs[1], yOffset: lineY, timePhase: 1.4, rotSign: -1 },
-          { x: xs[2], yOffset: lineY, timePhase: 1.1, rotSign: -1 },
-          { x: xs[3], yOffset: lineY, timePhase: 1.6, rotSign: 1 }
+          { x: -half, yOffset: yTop, timePhase: 0.9, rotSign: 1 },
+          { x: half, yOffset: yTop, timePhase: 1.4, rotSign: -1 },
+          { x: -half, yOffset: yBottom, timePhase: 1.1, rotSign: -1 },
+          { x: half, yOffset: yBottom, timePhase: 1.6, rotSign: 1 }
         ];
       }
       const layoutT = THREE.MathUtils.clamp((w - 380) / 1060, 0, 1);
       let xOuter = THREE.MathUtils.lerp(0.98, 1.86, layoutT) * spreadMul;
-      let ySpread = THREE.MathUtils.lerp(0.34, 0.56, layoutT) * spreadMul;
+      let ySpread = THREE.MathUtils.lerp(0.52, 0.74, layoutT) * spreadMul;
+      /* При сильном spreadMul орбиты не должны смыкаться ни по вертикали (одна колонка), ни по горизонтали */
+      xOuter = Math.max(xOuter, 0.92 * spreadMul + 0.14);
+      ySpread = Math.max(ySpread, 0.46);
+      const ySpreadUpper = ySpread + 0.12;
 
       return [
-        { x: -xOuter, yOffset: ySpread, timePhase: 0.9, rotSign: 1 },
+        { x: -xOuter, yOffset: ySpreadUpper, timePhase: 0.9, rotSign: 1 },
         { x: -xOuter, yOffset: -ySpread, timePhase: 1.4, rotSign: -1 },
-        { x: xOuter, yOffset: ySpread, timePhase: 1.1, rotSign: -1 },
+        { x: xOuter, yOffset: ySpreadUpper, timePhase: 1.1, rotSign: -1 },
         { x: xOuter, yOffset: -ySpread, timePhase: 1.6, rotSign: 1 }
       ];
     };
@@ -375,9 +386,10 @@ export const LiquidHeroScene = () => {
     const labelWorld = new THREE.Vector3();
 
     satelliteConfigs.forEach((cfg) => {
-      const satGeometry = new THREE.IcosahedronGeometry(0.48, 4);
-      const satMesh = new THREE.Mesh(satGeometry, material);
+      const satGeometry = new THREE.IcosahedronGeometry(0.52, 4);
+      const satMesh = new THREE.Mesh(satGeometry, satMaterial);
       satMesh.position.set(cfg.x, 0.06 + cfg.yOffset, 0.04);
+      satMesh.renderOrder = 2;
       scene.add(satMesh);
       satelliteMeshes.push(satMesh);
 
@@ -589,19 +601,23 @@ export const LiquidHeroScene = () => {
         sat.geometry.computeVertexNormals();
 
         const satMesh = satelliteMeshes[index];
-        const driftMul = isTinyVp ? 0.35 : isMobileViewport ? 0.55 : 1;
-        const extraDriftY = Math.sin(time * 0.0003 + sat.timePhase) * 0.018 * driftMul;
-        const driftZ = Math.cos(time * 0.00026 + sat.timePhase * 0.8) * 0.04 * driftMul;
+        const driftMul = isTinyVp ? 0.28 : isMobileViewport ? 0.42 : 1;
+        const extraDriftY = Math.sin(time * 0.0003 + sat.timePhase) * 0.014 * driftMul;
+        const driftZ = Math.cos(time * 0.00026 + sat.timePhase * 0.8) * 0.03 * driftMul;
         const verticalOffset = satelliteConfigs[index].yOffset;
         const xWobble = isTinyVp ? 0.004 : isMobileViewport ? 0.008 : 0.02;
         satMesh.position.x =
           satelliteConfigs[index].x + (isMobileViewport ? 0 : Math.sin(time * 0.00018 + index) * xWobble);
         satMesh.position.y = mainY + verticalOffset + extraDriftY;
-        satMesh.position.z = 0.04 + driftZ;
+        /* Ближе к камере на мобилке — иначе большой шар перекрывает малые по depth buffer */
+        const satBaseZ = isMobileViewport ? (isTinyVp ? 0.62 : 0.54) : 0.04;
+        satMesh.position.z = satBaseZ + driftZ * (isMobileViewport ? 0.45 : 1);
         satMesh.rotation.y += dt * 0.12 * sat.rotSign;
         satMesh.rotation.x += dt * 0.06;
-        const satMobileScale = isTinyVp ? 0.33 : isMobileViewport ? 0.36 : 0.42;
-        satMesh.scale.setScalar((0.72 + intro * 0.28) * satMobileScale * pulse * orbitScale.sat);
+        const satMobileScale = isTinyVp ? 0.48 : isMobileViewport ? 0.50 : 0.42;
+        /* На мобилке computeSceneLayout даёт orbitSat << 1 — без компенсации шары визуально крошечные */
+        const satOrbitMul = isMobileViewport ? 1 : orbitScale.sat;
+        satMesh.scale.setScalar((0.72 + intro * 0.28) * satMobileScale * pulse * satOrbitMul);
       });
 
       const labelLayerEl = labelLayerRef.current;
@@ -622,9 +638,8 @@ export const LiquidHeroScene = () => {
         }
 
         const satMesh = satelliteMeshes[i];
-        // Anchor directly on the satellite center (like QODEQ on the main orb),
-        // with a hair forward in camera space to reduce "edge" jitter in projection.
-        labelWorld.set(satMesh.position.x, satMesh.position.y, satMesh.position.z + 0.02);
+        satMesh.updateMatrixWorld(true);
+        labelWorld.setFromMatrixPosition(satMesh.matrixWorld);
         labelWorld.project(camera);
 
         const isBehind = labelWorld.z > 1;
@@ -633,26 +648,26 @@ export const LiquidHeroScene = () => {
           continue;
         }
 
-        // NDC → пиксели ровно по отображаемому canvas (как raycaster), затем в локальные координаты слоя подписей.
+        // NDC → пиксели по canvas; translate(-50%,-50%) — центр строки в центре шара (без смещений над/под мобилкой).
         const x =
           (labelWorld.x * 0.5 + 0.5) * canvasRect.width + canvasRect.left - layerRect.left;
         const y =
           (-labelWorld.y * 0.5 + 0.5) * canvasRect.height + canvasRect.top - layerRect.top;
 
-        const labelBelowPx = isTinyVp ? 18 : isMobileViewport ? 14 : 0;
-        labelEl.style.transform =
-          labelBelowPx > 0
-            ? `translate3d(${x}px, ${y + labelBelowPx}px, 0) translate(-50%, 0)`
-            : `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`;
+        labelEl.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`;
       }
 
       mesh.rotation.y += dt * 0.1;
       mesh.rotation.x += dt * 0.05;
       mesh.position.x = isMobileViewport ? 0 : Math.sin(time * 0.00022) * 0.03;
       mesh.position.y = mainY;
-      const mainScaleBase = isTinyVp ? 0.88 : isMobileViewport ? 0.92 : 1;
-      mesh.scale.setScalar((0.76 + intro * 0.24) * pulse * orbitScale.main * mainScaleBase);
+      /* На мобилке центральный шар был перегружающим — держим заметно ниже десктопного масштаба */
+      const mainScaleBase = isTinyVp ? 0.76 : isMobileViewport ? 0.82 : 1;
+      const mainOrbitMul = isMobileViewport ? 1 : orbitScale.main;
+      mesh.scale.setScalar((0.76 + intro * 0.24) * pulse * mainOrbitMul * mainScaleBase);
+      mesh.position.z = isMobileViewport ? -0.06 : 0;
       material.opacity = intro;
+      satMaterial.opacity = intro;
 
       revealCenteredTitle(titleRef.current, (introRaw - 0.2) / 0.8);
       revealFlowElement(subtitleRef.current, (introRaw - 0.42) / 0.58, 24, 8);
@@ -674,6 +689,7 @@ export const LiquidHeroScene = () => {
         sat.geometry.dispose();
       });
       material.dispose();
+      satMaterial.dispose();
       renderer.dispose();
       if (mountNode.contains(renderer.domElement)) {
         mountNode.removeChild(renderer.domElement);
@@ -683,7 +699,13 @@ export const LiquidHeroScene = () => {
 
   return (
     <main id="hero-main" style={containerStyle}>
-      <div ref={mountRef} style={canvasStyle} />
+      <div
+        ref={mountRef}
+        style={{
+          ...canvasStyleBase,
+          touchAction: isMobile ? 'pan-y' : 'none'
+        }}
+      />
       <div style={vignetteStyle} />
       <div style={grainStyle} />
       <div ref={labelLayerRef} style={labelLayerStyle} aria-hidden="true">
