@@ -275,32 +275,28 @@ export const LiquidHeroScene = () => {
     mountNode.appendChild(renderer.domElement);
     renderer.domElement.style.display = 'block';
 
-    const lightA = new THREE.DirectionalLight(0xffffff, 1.35);
-    lightA.position.set(0, 6, 0);
-    lightA.target.position.set(0, 0.2, 0);
-    scene.add(lightA.target);
-    scene.add(lightA);
+    /** Белый ключ сверху убран — остаются только ambient, передний fill и цветные огни спутников */
 
-    const lightB = new THREE.PointLight(0xffffff, 0.22, 10);
-    lightB.position.set(0.8, 1.1, 1.8);
-    scene.add(lightB);
+    /** Сильнее передний fill — без этого центр большого шара уходит в чёрный (ключ сверху снят) */
+    const centerFrontFill = new THREE.PointLight(0xf2f6fc, 1.02, 28);
+    centerFrontFill.position.set(0, 0.08, 4.26);
+    centerFrontFill.decay = 2;
+    scene.add(centerFrontFill);
 
-    const lightC = new THREE.PointLight(0xffffff, 0.15, 10);
-    lightC.position.set(-0.9, 0.9, 1.6);
-    scene.add(lightC);
-
-    const ambient = new THREE.AmbientLight(0x2d2d2d, 0.2);
+    const ambient = new THREE.AmbientLight(0x16161c, 0.084);
     scene.add(ambient);
 
     const geometry = new THREE.IcosahedronGeometry(1.2, 6);
     const material = new THREE.MeshPhysicalMaterial({
-      color: 0x8e8e8e,
+      color: 0x6b6b6b,
       metalness: 0,
       roughness: 0.92,
       clearcoat: 0,
       clearcoatRoughness: 1,
       sheen: 0,
       sheenColor: new THREE.Color(0x0d0d0d),
+      emissive: new THREE.Color(0x222226),
+      emissiveIntensity: 0,
       transparent: true,
       opacity: 0
     });
@@ -309,8 +305,47 @@ export const LiquidHeroScene = () => {
     mesh.renderOrder = 0;
     scene.add(mesh);
 
-    /** Отдельный инстанс материала (те же цвет/шероховатость, что у центра), чтобы корректно dispose без общих побочных эффектов */
-    const satMaterial = material.clone();
+    /** Порядок как в `satelliteLabelTexts`: Chatbot, CallBot, PaymentBot, QABot — матовый цвет + лёгкий emissive + PointLight сзади */
+    const chatbotSatMaterial = material.clone();
+    chatbotSatMaterial.color = new THREE.Color(0x338f5f);
+    chatbotSatMaterial.emissive = new THREE.Color(0x1a7a48);
+    chatbotSatMaterial.emissiveIntensity = 0.058;
+
+    const callbotSatMaterial = material.clone();
+    callbotSatMaterial.color = new THREE.Color(0x2d73b8);
+    callbotSatMaterial.emissive = new THREE.Color(0x154a8c);
+    callbotSatMaterial.emissiveIntensity = 0.058;
+
+    const paymentSatMaterial = material.clone();
+    paymentSatMaterial.color = new THREE.Color(0xa84848);
+    paymentSatMaterial.emissive = new THREE.Color(0x6b2228);
+    paymentSatMaterial.emissiveIntensity = 0.058;
+
+    const qabotSatMaterial = material.clone();
+    qabotSatMaterial.color = new THREE.Color(0xb89428);
+    qabotSatMaterial.emissive = new THREE.Color(0x8a6e14);
+    qabotSatMaterial.emissiveIntensity = 0.058;
+
+    const satelliteTintMaterials = [
+      chatbotSatMaterial,
+      callbotSatMaterial,
+      paymentSatMaterial,
+      qabotSatMaterial
+    ];
+
+    const satelliteGlowLights = [
+      new THREE.PointLight(0x7af0b8, 0, 22),
+      new THREE.PointLight(0x8ec8ff, 0, 22),
+      new THREE.PointLight(0xff9c9c, 0, 22),
+      new THREE.PointLight(0xffeb8a, 0, 22)
+    ];
+    satelliteGlowLights.forEach((pl) => {
+      pl.decay = 2;
+      scene.add(pl);
+    });
+
+    const satGlowCamDir = new THREE.Vector3();
+    const satGlowTowardMain = new THREE.Vector3();
 
     /** Плавная разметка орбит от ширины (без «ступенек»). `spreadMul` — общее сжатие из resize(). */
     const getSatelliteConfigs = (width, spreadMul = 1) => {
@@ -385,9 +420,10 @@ export const LiquidHeroScene = () => {
 
     const labelWorld = new THREE.Vector3();
 
-    satelliteConfigs.forEach((cfg) => {
+    satelliteConfigs.forEach((cfg, satIndex) => {
       const satGeometry = new THREE.IcosahedronGeometry(0.52, 4);
-      const satMesh = new THREE.Mesh(satGeometry, satMaterial);
+      const satMat = satelliteTintMaterials[satIndex];
+      const satMesh = new THREE.Mesh(satGeometry, satMat);
       satMesh.position.set(cfg.x, 0.06 + cfg.yOffset, 0.04);
       satMesh.renderOrder = 2;
       scene.add(satMesh);
@@ -620,6 +656,26 @@ export const LiquidHeroScene = () => {
         satMesh.scale.setScalar((0.72 + intro * 0.28) * satMobileScale * pulse * satOrbitMul);
       });
 
+      const glowBack = isMobileViewport ? -0.46 : -0.52;
+      const glowIntensity = intro * 4.55;
+      const mainCx = isMobileViewport ? 0 : Math.sin(time * 0.00022) * 0.03;
+      const mainCy = mainY;
+      const mainCz = isMobileViewport ? -0.06 : 0;
+      for (let gi = 0; gi < satelliteGlowLights.length; gi += 1) {
+        const sm = satelliteMeshes[gi];
+        satGlowCamDir.subVectors(camera.position, sm.position).normalize();
+        satGlowTowardMain.set(mainCx - sm.position.x, mainCy - sm.position.y, mainCz - sm.position.z);
+        if (satGlowTowardMain.lengthSq() < 1e-10) {
+          satGlowTowardMain.set(0, -1, 0);
+        }
+        satGlowTowardMain.normalize();
+        satelliteGlowLights[gi].position
+          .copy(sm.position)
+          .addScaledVector(satGlowCamDir, glowBack * 0.42)
+          .addScaledVector(satGlowTowardMain, 0.52);
+        satelliteGlowLights[gi].intensity = glowIntensity;
+      }
+
       const labelLayerEl = labelLayerRef.current;
       const canvasRect = domElement.getBoundingClientRect();
       const layerRect = labelLayerEl?.getBoundingClientRect();
@@ -667,7 +723,12 @@ export const LiquidHeroScene = () => {
       mesh.scale.setScalar((0.76 + intro * 0.24) * pulse * mainOrbitMul * mainScaleBase);
       mesh.position.z = isMobileViewport ? -0.06 : 0;
       material.opacity = intro;
-      satMaterial.opacity = intro;
+      /* Лёгкий равномерный слой на центральную орбу — поднимает провалы между гранями там, куда почти не доходит боковой цвет */
+      material.emissiveIntensity = 0.052 * intro;
+      satelliteTintMaterials.forEach((m) => {
+        m.opacity = intro;
+        m.emissiveIntensity = 0.058 * intro;
+      });
 
       revealCenteredTitle(titleRef.current, (introRaw - 0.2) / 0.8);
       revealFlowElement(subtitleRef.current, (introRaw - 0.42) / 0.58, 24, 8);
@@ -689,7 +750,14 @@ export const LiquidHeroScene = () => {
         sat.geometry.dispose();
       });
       material.dispose();
-      satMaterial.dispose();
+      satelliteTintMaterials.forEach((m) => {
+        m.dispose();
+      });
+      satelliteGlowLights.forEach((pl) => {
+        scene.remove(pl);
+      });
+      scene.remove(centerFrontFill);
+      scene.remove(ambient);
       renderer.dispose();
       if (mountNode.contains(renderer.domElement)) {
         mountNode.removeChild(renderer.domElement);
