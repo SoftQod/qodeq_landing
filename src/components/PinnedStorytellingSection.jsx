@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const darkTheme = {
   colors: {
@@ -82,56 +82,14 @@ export const PinnedStorytellingSection = () => {
   const [viewportWidth, setViewportWidth] = useState(() =>
     typeof window !== 'undefined' ? window.innerWidth : 1200
   );
-  const [progress, setProgress] = useState(0);
   const [introVisible, setIntroVisible] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
-  const scrollPerStepVh = 46;
   const isNarrow = viewportWidth <= 900;
 
   useEffect(() => {
     const onResize = () => setViewportWidth(window.innerWidth || 1200);
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
-  }, []);
-
-  useEffect(() => {
-    let rafId = 0;
-
-    const updateProgress = () => {
-      rafId = 0;
-      const node = sectionRef.current;
-      if (!node) {
-        return;
-      }
-
-      const rect = node.getBoundingClientRect();
-      const scrollable = node.offsetHeight - window.innerHeight;
-      if (scrollable <= 0) {
-        setProgress(0);
-        return;
-      }
-
-      const current = Math.min(Math.max(-rect.top, 0), scrollable);
-      setProgress(current / scrollable);
-    };
-
-    const onScroll = () => {
-      if (!rafId) {
-        rafId = requestAnimationFrame(updateProgress);
-      }
-    };
-
-    updateProgress();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll);
-
-    return () => {
-      if (rafId) {
-        cancelAnimationFrame(rafId);
-      }
-      window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', onScroll);
-    };
   }, []);
 
   useEffect(() => {
@@ -153,15 +111,6 @@ export const PinnedStorytellingSection = () => {
     observer.observe(node);
     return () => observer.disconnect();
   }, []);
-
-  const progressIndex = useMemo(() => {
-    const maxIndex = steps.length - 1;
-    return Math.min(maxIndex, Math.max(0, Math.round(progress * maxIndex)));
-  }, [progress]);
-
-  useEffect(() => {
-    setActiveIndex(progressIndex);
-  }, [progressIndex]);
 
   const stickyStyleResponsive = isNarrow
     ? {
@@ -193,7 +142,7 @@ export const PinnedStorytellingSection = () => {
       ref={sectionRef}
       style={{
         ...sectionStyle,
-        height: `calc(100vh + ${(steps.length - 1) * scrollPerStepVh}vh)`,
+        minHeight: '100vh',
         width: '100%',
         maxWidth: '100%',
         boxSizing: 'border-box'
