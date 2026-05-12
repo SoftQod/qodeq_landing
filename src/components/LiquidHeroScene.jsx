@@ -109,8 +109,20 @@ export const LiquidHeroScene = () => {
   const isTinyMobile = viewportWidth <= 400;
 
   useEffect(() => {
-    const id = requestAnimationFrame(() => setEntered(true));
-    return () => cancelAnimationFrame(id);
+    let raf2 = 0;
+    let cancelled = false;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        if (!cancelled) {
+          setEntered(true);
+        }
+      });
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
   }, []);
 
   useEffect(() => {

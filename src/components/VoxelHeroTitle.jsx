@@ -1,14 +1,43 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect, useState, memo, useRef } from 'react';
 
-/** Базовая сетка 5×7: «1» — кубик */
+/** Базовая сетка 5×7: «1» — точка */
 const LETTERS = {
   Q: ['01110', '10001', '10001', '10001', '10101', '10010', '01101'],
   O: ['01110', '10001', '10001', '10001', '10001', '10001', '01110'],
   D: ['11110', '10001', '10001', '10001', '10001', '10001', '11110'],
-  E: ['11111', '10000', '11110', '10000', '10000', '10000', '11111']
+  /** Средняя перекладина на центральном ряду (3 сверху / 3 снизу) */
+  E: ['11111', '10000', '10000', '11110', '10000', '10000', '11111']
 };
 
 const WORD = 'QODEQ';
+
+const ENTER_DUR_MS = 1920;
+/** Разлёт: дольше и мягче ease-out в конце размаха */
+const SCATTER_DUR_MS = 1680;
+/** Сборка в строку — плавно, почти без разброса старта между точками */
+const HORIZONTAL_DUR_MS = 2100;
+/** Насколько раньше начать горизонтальную сборку относительно конца разлёта (непрерывное движение) */
+const SCATTER_HORIZ_OVERLAP_MS = 280;
+const SCATTER_EASE = 'cubic-bezier(0.12, 0.85, 0.22, 1)';
+const HORIZ_EASE = 'cubic-bezier(0.14, 1, 0.32, 1)';
+
+/** Временные метки разлёта / горизонтали (мс от старта эффекта роста) */
+function getRebuildGrowthWindow(maxDelay) {
+  const assembleEnd = maxDelay + ENTER_DUR_MS + 24;
+  const tScatter = assembleEnd;
+  const tHoriz = tScatter + SCATTER_DUR_MS - SCATTER_HORIZ_OVERLAP_MS;
+  const tGrowEnd = tHoriz + HORIZONTAL_DUR_MS;
+  return { tScatter, tHoriz, tGrowEnd };
+}
+
+/** rgba для glow из hex-акцента */
+function accentGlowRgba(accentHex, alpha) {
+  const m = /^#?([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(String(accentHex).trim());
+  if (!m) {
+    return `rgba(16, 163, 127, ${alpha})`;
+  }
+  return `rgba(${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}, ${alpha})`;
+}
 
 function expandGrid(rows, factor) {
   if (factor <= 1) {
@@ -38,93 +67,19 @@ function exitVector(letterIndex, salt, seedA, seedB) {
   const dist = 820 + stable01(letterIndex, salt, seedB, 12) * 1100;
   return {
     x: Math.cos(angle) * dist,
-    y: Math.sin(angle) * dist,
-    rot: (stable01(letterIndex, salt, seedA + seedB, 13) - 0.5) * 34
+    y: Math.sin(angle) * dist
   };
 }
 
-function filled(grid, r, c) {
-  if (r < 0 || c < 0 || r >= grid.length || c >= grid[r].length) {
-    return false;
-  }
-  return grid[r][c] === '1';
-}
-
-/**
- * Размер блока от формы буквы: на острых выпуклых углах и кончиках — меньше,
- * чтобы силуэт визуально сгладился (антиалиасинг по кирпичикам).
- */
-function silhouetteSizing(grid, r, c, letterIndex, salt) {
-  const u = filled(grid, r - 1, c);
-  const d = filled(grid, r + 1, c);
-  const l = filled(grid, r, c - 1);
-  const ri = filled(grid, r, c + 1);
-  const s = (u ? 1 : 0) + (d ? 1 : 0) + (l ? 1 : 0) + (ri ? 1 : 0);
-
-  const micro = () => 0.96 + stable01(letterIndex, r, c, 300 + salt) * 0.08;
-
-  /** Сдвиг центра в сторону «толщины» буквы (доли baseUnit) */
-  const nudgeFromEmpties = () => {
-    let nx = 0;
-    let ny = 0;
-    if (!u) {
-      ny += 1;
-    }
-    if (!d) {
-      ny -= 1;
-    }
-    if (!l) {
-      nx += 1;
-    }
-    if (!ri) {
-      nx -= 1;
-    }
-    const len = Math.hypot(nx, ny) || 1;
-    return { x: nx / len, y: ny / len };
+function scatterOffset(letterIndex, salt) {
+  const angle = stable01(letterIndex, salt, 31, 41) * Math.PI * 2;
+  const dist = 420 + stable01(letterIndex, salt, 32, 42) * 720;
+  return {
+    x: Math.cos(angle) * dist,
+    y: Math.sin(angle) * dist
   };
-
-  if (s === 4) {
-    return { mul: 1.0 * micro(), nx: 0, ny: 0 };
-  }
-  if (s === 3) {
-    return { mul: 0.93 * micro(), nx: 0, ny: 0 };
-  }
-
-  if (s === 2) {
-    const oppositeBar =
-      (u && d && !l && !ri) || (l && ri && !u && !d);
-    if (oppositeBar) {
-      return { mul: 0.87 * micro(), nx: 0, ny: 0 };
-    }
-    const { x, y } = nudgeFromEmpties();
-    const mul = 0.48 + stable01(letterIndex, r, c, 400 + salt) * 0.14;
-    return { mul: mul * micro(), nx: x * 0.16, ny: y * 0.16 };
-  }
-
-  if (s === 1) {
-    let nx = 0;
-    let ny = 0;
-    if (u) {
-      ny -= 1;
-    }
-    if (d) {
-      ny += 1;
-    }
-    if (l) {
-      nx -= 1;
-    }
-    if (ri) {
-      nx += 1;
-    }
-    const len = Math.hypot(nx, ny) || 1;
-    const mul = 0.4 + stable01(letterIndex, r, c, 500 + salt) * 0.1;
-    return { mul: mul * micro(), nx: (nx / len) * 0.14, ny: (ny / len) * 0.14 };
-  }
-
-  return { mul: 0.42, nx: 0, ny: 0 };
 }
 
-/** Равномерная сетка — форма буквы читается; сглаживание только размерами углов */
 function buildUniformEdges(count, step) {
   const edges = [0];
   for (let k = 0; k < count; k += 1) {
@@ -142,8 +97,14 @@ function buildLetterBlocks(char, letterIndex, baseUnit, expandFactor, pad, globa
   const rows = grid.length;
   const cols = grid[0].length;
 
-  const colEdges = buildUniformEdges(cols, baseUnit * 0.98);
-  const rowEdges = buildUniformEdges(rows, baseUnit * 0.96);
+  const colStep = baseUnit * 0.98;
+  const rowStep = baseUnit * 0.96;
+  const colEdges = buildUniformEdges(cols, colStep);
+  const rowEdges = buildUniformEdges(rows, rowStep);
+
+  const cellW = colEdges[1] - colEdges[0];
+  const cellH = rowEdges[1] - rowEdges[0];
+  const dot = Math.min(cellW, cellH) * 0.78;
 
   const lift = (Math.sin(letterIndex * 1.7 + 0.4) - Math.cos(letterIndex * 0.9)) * (baseUnit * 0.22);
 
@@ -161,48 +122,24 @@ function buildLetterBlocks(char, letterIndex, baseUnit, expandFactor, pad, globa
       const cx = (colEdges[c] + colEdges[c + 1]) * 0.5;
       const cy = (rowEdges[r] + rowEdges[r + 1]) * 0.5;
 
-      const { mul, nx, ny } = silhouetteSizing(grid, r, c, letterIndex, salt);
+      const left = pad + cx - dot * 0.5;
+      const top = pad + cy - dot * 0.5 + lift;
 
-      const jitterX = (stable01(letterIndex, r, c, 50 + salt) - 0.5) * baseUnit * 0.12;
-      const jitterY = (stable01(letterIndex, r, c, 60 + salt) - 0.5) * baseUnit * 0.12;
-
-      let width = baseUnit * mul;
-      let height = baseUnit * mul;
-
-      const minS = baseUnit * 0.38;
-      const maxS = baseUnit * 1.12;
-      width = Math.min(maxS, Math.max(minS, width));
-      height = Math.min(maxS, Math.max(minS, height));
-
-      const nudgePxX = nx * baseUnit;
-      const nudgePxY = ny * baseUnit;
-
-      let left = pad + cx - width * 0.5 + nudgePxX + jitterX;
-      let top = pad + cy - height * 0.5 + nudgePxY + jitterY + lift;
-
-      left = Math.max(0, left);
-      top = Math.max(0, top);
-
-      const { x: ox, y: oy, rot } = exitVector(letterIndex, salt, r * 17 + c, r + c * 31);
+      const { x: ox, y: oy } = exitVector(letterIndex, salt, r * 17 + c, r + c * 31);
 
       const delay =
         letterIndex * 88 +
         (salt % 96) * 7.5 +
         Math.round(stable01(letterIndex, salt, r, 90) * 42);
 
-      const settleRot = (stable01(letterIndex, r, c, 200 + salt) - 0.5) * 16;
-
       blocks.push({
         id: `${letterIndex}-${r}-${c}-${salt}`,
-        left,
-        top,
-        width,
-        height,
+        left: Math.max(0, left),
+        top: Math.max(0, top),
+        size: dot,
         ox,
         oy,
-        rot,
-        delay,
-        settleRot
+        delay
       });
     });
   });
@@ -210,8 +147,8 @@ function buildLetterBlocks(char, letterIndex, baseUnit, expandFactor, pad, globa
   let maxR = 0;
   let maxB = 0;
   blocks.forEach((b) => {
-    maxR = Math.max(maxR, b.top + b.height);
-    maxB = Math.max(maxB, b.left + b.width);
+    maxR = Math.max(maxR, b.top + b.size);
+    maxB = Math.max(maxB, b.left + b.size);
   });
 
   const rawW = colEdges[colEdges.length - 1];
@@ -222,141 +159,209 @@ function buildLetterBlocks(char, letterIndex, baseUnit, expandFactor, pad, globa
   return { width, height, blocks, lift };
 }
 
-/** 3D-блок: куб по min стороне, растягивается до width×height */
-function VoxelBrick3D({
-  width,
-  height,
-  entered,
+const TitleDotBlock = memo(function TitleDotBlock({
+  size,
+  accent,
   ox,
   oy,
-  rot,
   delay,
-  settleRot,
-  accent,
-  accentHover
+  vx,
+  vy,
+  hx,
+  hy,
+  sx,
+  sy,
+  phase,
+  entered
 }) {
-  const cell = Math.min(width, height);
-  const h = cell * 0.495;
-  const perspectivePx = Math.max(200, Math.round(Math.max(width, height) * 26));
-  const sx = width / cell;
-  const sy = height / cell;
+  const displayPhase = !entered ? 0 : Math.max(phase, 1);
 
-  const faceCommon = {
-    position: 'absolute',
-    left: '50%',
-    top: '50%',
-    width: cell,
-    height: cell,
-    marginLeft: -cell * 0.5,
-    marginTop: -cell * 0.5,
-    boxSizing: 'border-box',
-    backfaceVisibility: 'hidden',
-    border: '1px solid rgba(0,0,0,0.45)',
-    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)'
-  };
+  const outerLeft = displayPhase >= 3 ? hx : vx;
+  const outerTop = displayPhase >= 3 ? hy : vy;
 
-  const faces = [
-    {
-      t: `rotateY(0deg) translateZ(${h}px)`,
-      bg: `linear-gradient(155deg, #0a4536 0%, ${accent} 40%, #031510 100%)`
-    },
-    {
-      t: `rotateY(180deg) translateZ(${h}px)`,
-      bg: 'linear-gradient(165deg, #021c17 0%, #010807 100%)'
-    },
-    {
-      t: `rotateY(90deg) translateZ(${h}px)`,
-      bg: `linear-gradient(180deg, #0b5643 0%, ${accentHover} 38%, #021a14 100%)`
-    },
-    {
-      t: `rotateY(-90deg) translateZ(${h}px)`,
-      bg: 'linear-gradient(180deg, #063d30 0%, #021510 100%)'
-    },
-    {
-      t: `rotateX(90deg) translateZ(${h}px)`,
-      bg: 'linear-gradient(145deg, #1a8f72 0%, #0d5c48 45%, #07362a 100%)'
-    },
-    {
-      t: `rotateX(-90deg) translateZ(${h}px)`,
-      bg: 'linear-gradient(180deg, #010d0b 0%, #000000 100%)'
-    }
-  ];
+  let tx = 0;
+  let ty = 0;
+  let opacity = 1;
 
-  const transition = `transform 1.92s cubic-bezier(0.12, 0.88, 0.18, 1) ${delay}ms, opacity 0.88s cubic-bezier(0.25, 0.82, 0.32, 1) ${delay}ms`;
+  if (displayPhase === 0) {
+    tx = ox;
+    ty = oy;
+    opacity = 0;
+  } else if (displayPhase === 1) {
+    tx = 0;
+    ty = 0;
+    opacity = 1;
+  } else if (displayPhase === 2) {
+    tx = sx;
+    ty = sy;
+    opacity = 1;
+  } else {
+    tx = 0;
+    ty = 0;
+    opacity = 1;
+  }
+
+  const enterTrans = `transform ${ENTER_DUR_MS}ms cubic-bezier(0.12, 0.88, 0.18, 1) ${delay}ms, opacity 0.88s cubic-bezier(0.25, 0.82, 0.32, 1) ${delay}ms`;
+  const scatterTrans = `transform ${SCATTER_DUR_MS}ms ${SCATTER_EASE}`;
+  const horizOuterTrans = `transform ${HORIZONTAL_DUR_MS}ms ${HORIZ_EASE}`;
+  const horizInnerTrans = `transform ${HORIZONTAL_DUR_MS}ms ${HORIZ_EASE}`;
+  const outerTransition = displayPhase >= 3 ? horizOuterTrans : 'none';
+  const midTransition =
+    displayPhase === 0 || displayPhase === 1
+      ? enterTrans
+      : displayPhase === 2
+        ? scatterTrans
+        : horizInnerTrans;
 
   return (
     <div
       style={{
-        width,
-        height,
-        perspective: `${perspectivePx}px`,
-        perspectiveOrigin: '50% 42%',
-        transformStyle: 'preserve-3d',
+        position: 'absolute',
+        left: 0,
+        top: 0,
+        width: size,
+        height: size,
+        transform: `translate3d(${outerLeft.toFixed(2)}px, ${outerTop.toFixed(2)}px, 0)`,
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        overflow: 'visible'
+        alignItems: 'flex-start',
+        justifyContent: 'flex-start',
+        pointerEvents: 'none',
+        overflow: 'visible',
+        transition: outerTransition,
+        willChange: displayPhase >= 3 ? 'transform' : undefined
       }}
     >
       <div
         style={{
-          width: cell,
-          height: cell,
-          transformStyle: 'preserve-3d',
-          transform: entered
-            ? `translate3d(0,0,0) rotate(${settleRot.toFixed(2)}deg)`
-            : `translate3d(${ox.toFixed(1)}px, ${oy.toFixed(1)}px, 0) rotate(${rot.toFixed(2)}deg)`,
-          opacity: entered ? 1 : 0,
-          transition,
-          willChange: 'transform, opacity'
+          width: size,
+          height: size,
+          transform: `translate3d(${tx.toFixed(2)}px, ${ty.toFixed(2)}px, 0)`,
+          opacity,
+          transition: midTransition,
+          willChange: displayPhase >= 2 ? 'transform, opacity' : 'opacity'
         }}
       >
         <div
           style={{
-            width: cell,
-            height: cell,
-            position: 'relative',
-            transformStyle: 'preserve-3d',
-            transform: `rotateX(-20deg) rotateY(34deg) scale3d(${sx.toFixed(3)}, ${sy.toFixed(3)}, 1)`
+            width: size,
+            height: size,
+            borderRadius: '50%',
+            boxSizing: 'border-box',
+            transform: 'translate3d(0,0,0) scale(var(--dotScale, 1))',
+            transformOrigin: '0 0',
+            background: `radial-gradient(circle at 32% 28%, rgba(255,255,255,0.22) 0%, ${accent} 42%, #062018 88%, #010807 100%)`,
+            boxShadow: `
+          inset 0 1px 0 rgba(255,255,255,0.12),
+          0 0 0 1px rgba(0,0,0,0.4),
+          0 2px 8px rgba(0,0,0,0.35)
+        `,
+            transition: 'none',
+            willChange: 'transform',
+            WebkitBackfaceVisibility: 'hidden',
+            backfaceVisibility: 'hidden'
           }}
-        >
-          <div
-            style={{
-              width: cell,
-              height: cell,
-              position: 'relative',
-              transformStyle: 'preserve-3d'
-            }}
-          >
-            {faces.map((face, i) => (
-              <div
-                key={i}
-                style={{
-                  ...faceCommon,
-                  transform: face.t,
-                  background: face.bg
-                }}
-              />
-            ))}
-          </div>
-        </div>
+        />
       </div>
     </div>
   );
+});
+
+function buildCanvasDots(lettersLayout, letterGap, horizontalWordScale) {
+  if (!lettersLayout.length) {
+    return { dots: [], canvasW: 0, canvasH: 0, maxDelay: 0 };
+  }
+
+  const S = horizontalWordScale;
+
+  const maxLetterW = Math.max(...lettersLayout.map((l) => l.width));
+  let vertY = 0;
+  const vertOrigin = lettersLayout.map((letter) => {
+    const xOff = (maxLetterW - letter.width) * 0.5;
+    const y = vertY;
+    vertY += letter.height + letterGap;
+    return { xOff, y };
+  });
+  const vertTotalH = vertY - letterGap;
+
+  const maxLetterHHoriz = Math.max(...lettersLayout.map((l) => l.height * S));
+  let horizX = 0;
+  const horOrigin = lettersLayout.map((letter) => {
+    const x = horizX;
+    const scaledH = letter.height * S;
+    const yOff = (maxLetterHHoriz - scaledH) * 0.5;
+    horizX += letter.width * S + letterGap * S;
+    return { x, yOff };
+  });
+  const horizTotalW = horizX - letterGap * S;
+
+  const canvasW = Math.max(maxLetterW, horizTotalW);
+  const canvasH = Math.max(vertTotalH, maxLetterHHoriz);
+  const padVX = (canvasW - maxLetterW) * 0.5;
+  const padVY = (canvasH - vertTotalH) * 0.5;
+  const padHX = (canvasW - horizTotalW) * 0.5;
+  const padHY = (canvasH - maxLetterHHoriz) * 0.5;
+
+  const dots = [];
+  let maxDelay = 0;
+
+  lettersLayout.forEach((letter, letterIndex) => {
+    const vo = vertOrigin[letterIndex];
+    const ho = horOrigin[letterIndex];
+
+    letter.blocks.forEach((b) => {
+      maxDelay = Math.max(maxDelay, b.delay);
+      const { x: sx, y: sy } = scatterOffset(letterIndex, b.delay + letterIndex * 997);
+      dots.push({
+        ...b,
+        vx: padVX + vo.xOff + b.left,
+        vy: padVY + vo.y + b.top,
+        hx: padHX + ho.x + b.left * S,
+        hy: padHY + ho.yOff + b.top * S,
+        sx,
+        sy
+      });
+    });
+  });
+
+  return { dots, canvasW, canvasH, maxDelay };
 }
 
 export const VoxelHeroTitle = ({ entered, isTinyMobile, isSmallMobile, isMobile, colors }) => {
-  const { expandFactor, baseUnit, letterGap, letterPad } = useMemo(() => {
+  const { expandFactor, baseUnit, letterGap, letterPad, horizontalWordScale } = useMemo(() => {
     if (isTinyMobile) {
-      return { expandFactor: 2, baseUnit: 5.5, letterGap: 4, letterPad: 2.5 };
+      return {
+        expandFactor: 2,
+        baseUnit: 5.5,
+        letterGap: 4,
+        letterPad: 2.5,
+        horizontalWordScale: 1.42
+      };
     }
     if (isSmallMobile) {
-      return { expandFactor: 2, baseUnit: 6.8, letterGap: 5, letterPad: 3 };
+      return {
+        expandFactor: 2,
+        baseUnit: 6.8,
+        letterGap: 5,
+        letterPad: 3,
+        horizontalWordScale: 1.55
+      };
     }
     if (isMobile) {
-      return { expandFactor: 2, baseUnit: 8, letterGap: 6, letterPad: 3.5 };
+      return {
+        expandFactor: 2,
+        baseUnit: 8,
+        letterGap: 6,
+        letterPad: 3.5,
+        horizontalWordScale: 1.72
+      };
     }
-    return { expandFactor: 3, baseUnit: 6.6, letterGap: 7, letterPad: 4 };
+    return {
+      expandFactor: 3,
+      baseUnit: 6.6,
+      letterGap: 7,
+      letterPad: 4,
+      horizontalWordScale: 1.9
+    };
   }, [isTinyMobile, isSmallMobile, isMobile]);
 
   const lettersLayout = useMemo(() => {
@@ -366,62 +371,123 @@ export const VoxelHeroTitle = ({ entered, isTinyMobile, isSmallMobile, isMobile,
     );
   }, [baseUnit, expandFactor, letterPad]);
 
+  const { dots, canvasW, canvasH, maxDelay } = useMemo(
+    () => buildCanvasDots(lettersLayout, letterGap, horizontalWordScale),
+    [lettersLayout, letterGap, horizontalWordScale]
+  );
+
+  const [phase, setPhase] = useState(0);
+  const dotsRootRef = useRef(null);
+
+  const rebuildWindow = useMemo(() => getRebuildGrowthWindow(maxDelay), [maxDelay]);
+
+  useEffect(() => {
+    const root = dotsRootRef.current;
+    const setScale = (v) => {
+      if (root) {
+        root.style.setProperty('--dotScale', v);
+      }
+    };
+
+    if (!entered) {
+      setScale('1');
+      return undefined;
+    }
+
+    const { tScatter, tHoriz } = rebuildWindow;
+    /** Рост только на участке разлёта; к началу сборки в строку масштаб уже максимальный */
+    const growSpan = Math.max(1, tHoriz - tScatter);
+    const anchor = performance.now();
+    const smax = horizontalWordScale;
+    let raf = 0;
+    let alive = true;
+
+    setScale('1');
+
+    const tick = () => {
+      if (!alive) {
+        return;
+      }
+      const elapsed = performance.now() - anchor;
+      const linear = (elapsed - tScatter) / growSpan;
+      const t = Math.min(1, Math.max(0, linear));
+      const eased = 1 - (1 - t) ** 3;
+      const scale = 1 + eased * (smax - 1);
+      setScale(scale.toFixed(6));
+      if (t < 1) {
+        raf = requestAnimationFrame(tick);
+      } else {
+        setScale(String(smax));
+      }
+    };
+
+    raf = requestAnimationFrame(tick);
+    return () => {
+      alive = false;
+      cancelAnimationFrame(raf);
+      setScale('1');
+    };
+  }, [entered, rebuildWindow, horizontalWordScale]);
+
+  useEffect(() => {
+    if (!entered) {
+      setPhase(0);
+      return undefined;
+    }
+
+    const assembleEnd = maxDelay + ENTER_DUR_MS + 24;
+    const tScatter = assembleEnd;
+    const tHoriz = tScatter + SCATTER_DUR_MS - SCATTER_HORIZ_OVERLAP_MS;
+    const tDone = tHoriz + HORIZONTAL_DUR_MS + 40;
+
+    const idScatter = window.setTimeout(() => setPhase(2), tScatter);
+    const idHoriz = window.setTimeout(() => setPhase(3), tHoriz);
+    const idDone = window.setTimeout(() => setPhase(4), tDone);
+
+    return () => {
+      window.clearTimeout(idScatter);
+      window.clearTimeout(idHoriz);
+      window.clearTimeout(idDone);
+    };
+  }, [entered, maxDelay]);
+
   const accent = colors.accent;
-  const accentHover = colors.accentHover ?? '#0E8C6F';
+  const titleGlow = `drop-shadow(0 0 22px ${accentGlowRgba(accent, 0.36)})`;
 
   return (
     <div
+      ref={dotsRootRef}
       role="presentation"
       style={{
-        display: 'flex',
-        flexDirection: 'row',
-        alignItems: 'flex-end',
-        justifyContent: 'center',
-        flexWrap: 'wrap',
-        gap: letterGap,
-        margin: 0,
+        position: 'relative',
+        width: canvasW,
+        height: canvasH,
+        margin: '0 auto',
         padding: '12px 8px 8px',
-        maxWidth: '100%',
-        boxSizing: 'border-box'
+        boxSizing: 'content-box',
+        '--dotScale': 1,
+        filter: titleGlow,
+        transform: 'translateZ(0)',
+        backfaceVisibility: 'hidden'
       }}
     >
-      {lettersLayout.map((letter, letterIndex) => (
-        <div
-          key={`${WORD[letterIndex]}-${letterIndex}`}
-          style={{
-            position: 'relative',
-            width: letter.width,
-            height: letter.height,
-            flexShrink: 0
-          }}
-        >
-          {letter.blocks.map((b) => (
-            <div
-              key={b.id}
-              style={{
-                position: 'absolute',
-                left: b.left,
-                top: b.top,
-                width: b.width,
-                height: b.height,
-                pointerEvents: 'none'
-              }}
-            >
-              <VoxelBrick3D
-                width={b.width}
-                height={b.height}
-                entered={entered}
-                ox={b.ox}
-                oy={b.oy}
-                rot={b.rot}
-                delay={b.delay}
-                settleRot={b.settleRot}
-                accent={accent}
-                accentHover={accentHover}
-              />
-            </div>
-          ))}
-        </div>
+      {dots.map((d) => (
+        <TitleDotBlock
+          key={d.id}
+          size={d.size}
+          accent={accent}
+          ox={d.ox}
+          oy={d.oy}
+          delay={d.delay}
+          vx={d.vx}
+          vy={d.vy}
+          hx={d.hx}
+          hy={d.hy}
+          sx={d.sx}
+          sy={d.sy}
+          phase={phase}
+          entered={entered}
+        />
       ))}
     </div>
   );
