@@ -1,15 +1,50 @@
 import { useMemo, useEffect, useState, memo, useRef } from 'react';
+import { NavWordsCanvas } from 'components/NavWordsCanvas';
 
 /** Базовая сетка 5×7: «1» — точка */
 const LETTERS = {
-  Q: ['01110', '10001', '10001', '10001', '10101', '10010', '01101'],
-  O: ['01110', '10001', '10001', '10001', '10001', '10001', '01110'],
+  A: ['01110', '10001', '10001', '11111', '10001', '10001', '10001'],
+  B: ['11110', '10001', '10001', '11110', '10001', '10001', '11110'],
+  C: ['01110', '10001', '10000', '10000', '10000', '10001', '01110'],
   D: ['11110', '10001', '10001', '10001', '10001', '10001', '11110'],
-  /** Средняя перекладина на центральном ряду (3 сверху / 3 снизу) */
-  E: ['11111', '10000', '10000', '11110', '10000', '10000', '11111']
+  E: ['11111', '10000', '10000', '11110', '10000', '10000', '11111'],
+  H: ['10001', '10001', '10001', '11111', '10001', '10001', '10001'],
+  L: ['10000', '10000', '10000', '10000', '10000', '10000', '11111'],
+  M: ['10001', '11011', '10101', '10001', '10001', '10001', '10001'],
+  N: ['10001', '11001', '10101', '10011', '10001', '10001', '10001'],
+  O: ['01110', '10001', '10001', '10001', '10001', '10001', '01110'],
+  P: ['11110', '10001', '10001', '11110', '10000', '10000', '10000'],
+  Q: ['01110', '10001', '10001', '10001', '10101', '10010', '01101'],
+  R: ['11110', '10001', '10001', '11110', '10100', '10010', '10001'],
+  T: ['11111', '00100', '00100', '00100', '00100', '00100', '00100'],
+  Y: ['10001', '10001', '01010', '00100', '00100', '00100', '00100']
 };
 
 const WORD = 'QODEQ';
+
+/** Навигация из «взрыва» — индекс панели в HorizontalScrollSection */
+export const HERO_BOT_NAV = [
+  { label: 'Chatbot', text: 'CHATBOT', panelIndex: 0, ox: -1, oy: -1, color: '#22C55E' },
+  { label: 'Call Center Bot', text: 'CALL CENTER BOT', panelIndex: 1, ox: 1, oy: -1, color: '#3B82F6' },
+  { label: 'Payment Bot', text: 'PAYMENT BOT', panelIndex: 2, ox: -1, oy: 1, color: '#EF4444' },
+  { label: 'QA Bot', text: 'QA BOT', panelIndex: 3, ox: 1, oy: 1, color: '#FACC15' }
+];
+
+const BOT_PANEL_COUNT = 4;
+
+function scrollToBotPanel(panelIndex) {
+  const wrap = document.getElementById('horizontal-flow');
+  const section = wrap?.querySelector('section');
+  if (!section) {
+    wrap?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+  const maxIndex = Math.max(1, BOT_PANEL_COUNT - 1);
+  const scrollable = Math.max(0, section.offsetHeight - window.innerHeight);
+  const progress = Math.min(1, Math.max(0, panelIndex / maxIndex));
+  const top = section.offsetTop + progress * scrollable;
+  window.scrollTo({ top, behavior: 'smooth' });
+}
 
 const ENTER_DUR_MS = 1920;
 /** Разлёт: дольше и мягче ease-out в конце размаха */
@@ -18,6 +53,7 @@ const SCATTER_DUR_MS = 1680;
 const HORIZONTAL_DUR_MS = 2100;
 /** Насколько раньше начать горизонтальную сборку относительно конца разлёта (непрерывное движение) */
 const SCATTER_HORIZ_OVERLAP_MS = 280;
+const GLOW_FADE_MS = 1100;
 const SCATTER_EASE = 'cubic-bezier(0.12, 0.85, 0.22, 1)';
 const HORIZ_EASE = 'cubic-bezier(0.14, 1, 0.32, 1)';
 
@@ -28,15 +64,6 @@ function getRebuildGrowthWindow(maxDelay) {
   const tHoriz = tScatter + SCATTER_DUR_MS - SCATTER_HORIZ_OVERLAP_MS;
   const tGrowEnd = tHoriz + HORIZONTAL_DUR_MS;
   return { tScatter, tHoriz, tGrowEnd };
-}
-
-/** rgba для glow из hex-акцента */
-function accentGlowRgba(accentHex, alpha) {
-  const m = /^#?([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(String(accentHex).trim());
-  if (!m) {
-    return `rgba(16, 163, 127, ${alpha})`;
-  }
-  return `rgba(${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}, ${alpha})`;
 }
 
 function expandGrid(rows, factor) {
@@ -159,6 +186,124 @@ function buildLetterBlocks(char, letterIndex, baseUnit, expandFactor, pad, globa
   return { width, height, blocks, lift };
 }
 
+/** Горизонтальное слово из нескольких букв (для навигации) — ровная сетка без lift */
+function buildNavLetterBlocks(char, letterIndex, baseUnit, expandFactor, pad, globalSaltRef) {
+  const grid = expandGrid(LETTERS[char] ?? [], expandFactor);
+  if (!grid.length) {
+    return { width: 0, height: 0, blocks: [] };
+  }
+
+  const rows = grid.length;
+  const cols = grid[0].length;
+  const colStep = baseUnit;
+  const rowStep = baseUnit;
+  const colEdges = buildUniformEdges(cols, colStep);
+  const rowEdges = buildUniformEdges(rows, rowStep);
+  const cellW = colEdges[1] - colEdges[0];
+  const cellH = rowEdges[1] - rowEdges[0];
+  const dot = Math.min(cellW, cellH) * 0.84;
+  const blocks = [];
+
+  grid.forEach((row, r) => {
+    row.split('').forEach((bit, c) => {
+      if (bit !== '1') {
+        return;
+      }
+
+      const salt = globalSaltRef.i;
+      globalSaltRef.i += 1;
+      const cx = (colEdges[c] + colEdges[c + 1]) * 0.5;
+      const cy = (rowEdges[r] + rowEdges[r + 1]) * 0.5;
+      const left = pad + cx - dot * 0.5;
+      const top = pad + cy - dot * 0.5;
+
+      blocks.push({
+        id: `${letterIndex}-${r}-${c}-${salt}`,
+        left: Math.max(0, left),
+        top: Math.max(0, top),
+        size: dot,
+        delay: letterIndex * 48 + salt * 3
+      });
+    });
+  });
+
+  let maxR = 0;
+  let maxB = 0;
+  blocks.forEach((b) => {
+    maxR = Math.max(maxR, b.top + b.size);
+    maxB = Math.max(maxB, b.left + b.size);
+  });
+
+  const rawW = colEdges[colEdges.length - 1];
+  const rawH = rowEdges[rowEdges.length - 1];
+  const width = Math.max(maxB, pad * 2 + rawW) + pad;
+  const height = Math.max(maxR, pad * 2 + rawH) + pad;
+
+  return { width, height, blocks };
+}
+
+/** Горизонтальное слово из нескольких букв (для навигации) */
+function buildWordBlocks(text, wordIndex, baseUnit, expandFactor, letterPad, letterGap, globalSaltRef) {
+  const upper = text.toUpperCase();
+  const letterEntries = [];
+  let letterIdx = 0;
+
+  const chars = upper.split('');
+  for (let i = 0; i < chars.length; i += 1) {
+    const ch = chars[i];
+    if (ch === ' ') {
+      letterEntries.push({ space: true });
+      continue;
+    }
+    const letter = buildNavLetterBlocks(
+      ch,
+      wordIndex * 200 + letterIdx,
+      baseUnit,
+      expandFactor,
+      letterPad,
+      globalSaltRef
+    );
+    letterIdx += 1;
+    if (letter.width) {
+      letterEntries.push({ letter });
+    }
+  }
+
+  let maxH = 0;
+  letterEntries.forEach((entry) => {
+    if (entry.letter) {
+      maxH = Math.max(maxH, entry.letter.height);
+    }
+  });
+
+  const blocks = [];
+  let xCursor = 0;
+
+  for (let i = 0; i < letterEntries.length; i += 1) {
+    const entry = letterEntries[i];
+    if (entry.space) {
+      xCursor += baseUnit * 0.55;
+      continue;
+    }
+    const { letter } = entry;
+    const yOff = (maxH - letter.height) * 0.5;
+    const xOff = xCursor;
+    for (let bi = 0; bi < letter.blocks.length; bi += 1) {
+      const b = letter.blocks[bi];
+      blocks.push({
+        ...b,
+        id: `nav${wordIndex}-${b.id}`,
+        left: b.left + xOff,
+        top: b.top + yOff
+      });
+    }
+    xCursor += letter.width + letterGap;
+  }
+
+  const width = xCursor > 0 ? Math.max(0, xCursor - letterGap) : 0;
+  return { width, height: maxH, blocks };
+}
+
 const TitleDotBlock = memo(function TitleDotBlock({
   size,
   accent,
@@ -212,6 +357,7 @@ const TitleDotBlock = memo(function TitleDotBlock({
       : displayPhase === 2
         ? scatterTrans
         : horizInnerTrans;
+  const lite = displayPhase === 2 || displayPhase === 3;
 
   return (
     <div
@@ -222,46 +368,29 @@ const TitleDotBlock = memo(function TitleDotBlock({
         width: size,
         height: size,
         transform: `translate3d(${outerLeft.toFixed(2)}px, ${outerTop.toFixed(2)}px, 0)`,
-        display: 'flex',
-        alignItems: 'flex-start',
-        justifyContent: 'flex-start',
         pointerEvents: 'none',
         overflow: 'visible',
-        transition: outerTransition,
-        willChange: displayPhase >= 3 ? 'transform' : undefined
+        transition: outerTransition
       }}
     >
       <div
         style={{
           width: size,
           height: size,
-          transform: `translate3d(${tx.toFixed(2)}px, ${ty.toFixed(2)}px, 0)`,
+          borderRadius: '50%',
+          boxSizing: 'border-box',
+          background: lite
+            ? accent
+            : `radial-gradient(circle at 32% 28%, rgba(255,255,255,0.5) 0%, ${accent} 42%, #9A9A9A 88%, #2E2E2E 100%)`,
+          boxShadow: lite ? 'none' : 'inset 0 1px 0 rgba(255,255,255,0.12), 0 0 0 1px rgba(0,0,0,0.4)',
+          transform: `translate3d(${tx.toFixed(2)}px, ${ty.toFixed(2)}px, 0) scale(var(--dotScale, 1))`,
+          transformOrigin: '0 0',
           opacity,
-          transition: midTransition,
-          willChange: displayPhase >= 2 ? 'transform, opacity' : 'opacity'
+          transition: `${midTransition}, background 400ms ease, box-shadow 400ms ease`,
+          WebkitBackfaceVisibility: 'hidden',
+          backfaceVisibility: 'hidden'
         }}
-      >
-        <div
-          style={{
-            width: size,
-            height: size,
-            borderRadius: '50%',
-            boxSizing: 'border-box',
-            transform: 'translate3d(0,0,0) scale(var(--dotScale, 1))',
-            transformOrigin: '0 0',
-            background: `radial-gradient(circle at 32% 28%, rgba(255,255,255,0.22) 0%, ${accent} 42%, #062018 88%, #010807 100%)`,
-            boxShadow: `
-          inset 0 1px 0 rgba(255,255,255,0.12),
-          0 0 0 1px rgba(0,0,0,0.4),
-          0 2px 8px rgba(0,0,0,0.35)
-        `,
-            transition: 'none',
-            willChange: 'transform',
-            WebkitBackfaceVisibility: 'hidden',
-            backfaceVisibility: 'hidden'
-          }}
-        />
-      </div>
+      />
     </div>
   );
 });
@@ -326,7 +455,7 @@ function buildCanvasDots(lettersLayout, letterGap, horizontalWordScale) {
   return { dots, canvasW, canvasH, maxDelay };
 }
 
-export const VoxelHeroTitle = ({ entered, isTinyMobile, isSmallMobile, isMobile, colors }) => {
+export const VoxelHeroTitle = ({ entered, isTinyMobile, isSmallMobile, isMobile, onAnimationComplete, canInteract }) => {
   const { expandFactor, baseUnit, letterGap, letterPad, horizontalWordScale } = useMemo(() => {
     if (isTinyMobile) {
       return {
@@ -356,13 +485,42 @@ export const VoxelHeroTitle = ({ entered, isTinyMobile, isSmallMobile, isMobile,
       };
     }
     return {
-      expandFactor: 3,
+      expandFactor: 2,
       baseUnit: 6.6,
       letterGap: 7,
       letterPad: 4,
       horizontalWordScale: 1.9
     };
   }, [isTinyMobile, isSmallMobile, isMobile]);
+
+  const navSizing = useMemo(() => {
+    if (isTinyMobile) {
+      return { navBaseUnit: 3.6, navExpandFactor: 1, navLetterGap: 2.2, navLetterPad: 1.55 };
+    }
+    if (isSmallMobile) {
+      return { navBaseUnit: 4.05, navExpandFactor: 1, navLetterGap: 2.45, navLetterPad: 1.75 };
+    }
+    if (isMobile) {
+      return { navBaseUnit: 4.55, navExpandFactor: 1, navLetterGap: 2.75, navLetterPad: 1.95 };
+    }
+    return { navBaseUnit: 5.8, navExpandFactor: 1, navLetterGap: 3.4, navLetterPad: 2.35 };
+  }, [isTinyMobile, isSmallMobile, isMobile]);
+
+  const navWords = useMemo(() => {
+    const globalSaltRef = { i: 20000 };
+    return HERO_BOT_NAV.map((item, wordIndex) => ({
+      ...item,
+      layout: buildWordBlocks(
+        item.text,
+        wordIndex,
+        navSizing.navBaseUnit,
+        navSizing.navExpandFactor,
+        navSizing.navLetterPad,
+        navSizing.navLetterGap,
+        globalSaltRef
+      )
+    }));
+  }, [navSizing]);
 
   const lettersLayout = useMemo(() => {
     const globalSaltRef = { i: 0 };
@@ -378,6 +536,10 @@ export const VoxelHeroTitle = ({ entered, isTinyMobile, isSmallMobile, isMobile,
 
   const [phase, setPhase] = useState(0);
   const dotsRootRef = useRef(null);
+  const onCompleteRef = useRef(onAnimationComplete);
+  const completedRef = useRef(false);
+
+  onCompleteRef.current = onAnimationComplete;
 
   const rebuildWindow = useMemo(() => getRebuildGrowthWindow(maxDelay), [maxDelay]);
 
@@ -432,6 +594,7 @@ export const VoxelHeroTitle = ({ entered, isTinyMobile, isSmallMobile, isMobile,
   useEffect(() => {
     if (!entered) {
       setPhase(0);
+      completedRef.current = false;
       return undefined;
     }
 
@@ -451,44 +614,118 @@ export const VoxelHeroTitle = ({ entered, isTinyMobile, isSmallMobile, isMobile,
     };
   }, [entered, maxDelay]);
 
-  const accent = colors.accent;
-  const titleGlow = `drop-shadow(0 0 22px ${accentGlowRgba(accent, 0.36)})`;
+  const titleColor = '#FFFFFF';
+
+  useEffect(() => {
+    const root = dotsRootRef.current;
+    if (!root) {
+      return undefined;
+    }
+
+    if (phase < 4) {
+      root.style.filter = 'none';
+      return undefined;
+    }
+
+    const start = performance.now();
+    let raf = 0;
+    let alive = true;
+
+    const tick = () => {
+      if (!alive) {
+        return;
+      }
+      const t = Math.min(1, (performance.now() - start) / GLOW_FADE_MS);
+      const eased = 1 - (1 - t) ** 3;
+      root.style.filter = `drop-shadow(0 0 ${(22 * eased).toFixed(2)}px rgba(255, 255, 255, ${(0.34 * eased).toFixed(4)}))`;
+      if (t < 1) {
+        raf = requestAnimationFrame(tick);
+      } else if (!completedRef.current) {
+        completedRef.current = true;
+        onCompleteRef.current?.();
+      }
+    };
+
+    raf = requestAnimationFrame(tick);
+    return () => {
+      alive = false;
+      cancelAnimationFrame(raf);
+    };
+  }, [phase]);
+
+  const navSpreadX = isMobile ? (isTinyMobile ? 118 : isSmallMobile ? 138 : 158) : 340;
+  const navSpreadY = isMobile ? (isTinyMobile ? 92 : isSmallMobile ? 108 : 124) : 228;
+  const maxNavW = Math.max(...navWords.map((n) => n.layout.width), 0);
+  const maxNavH = Math.max(...navWords.map((n) => n.layout.height), 0);
+  const wrapPadX = Math.max(navSpreadX + (isMobile ? 36 : 56), maxNavW * 0.4 + 16);
+  const wrapPadYTop = Math.max(navSpreadY + (isMobile ? 32 : 48), maxNavH * 0.4 + 14);
+  const wrapPadYBottom = Math.max(navSpreadY * 0.58 + (isMobile ? 20 : 28), maxNavH * 0.28 + 10);
+  const wrapW = canvasW + wrapPadX * 2;
+  const wrapH = canvasH + wrapPadYTop + wrapPadYBottom;
+  const centerX = wrapPadX + canvasW * 0.5;
+  const centerY = wrapPadYTop + canvasH * 0.5;
 
   return (
     <div
-      ref={dotsRootRef}
-      role="presentation"
       style={{
         position: 'relative',
-        width: canvasW,
-        height: canvasH,
+        width: wrapW,
+        height: wrapH,
+        maxWidth: '100%',
         margin: '0 auto',
-        padding: '12px 8px 8px',
-        boxSizing: 'content-box',
-        '--dotScale': 1,
-        filter: titleGlow,
-        transform: 'translateZ(0)',
-        backfaceVisibility: 'hidden'
+        boxSizing: 'border-box'
       }}
     >
-      {dots.map((d) => (
-        <TitleDotBlock
-          key={d.id}
-          size={d.size}
-          accent={accent}
-          ox={d.ox}
-          oy={d.oy}
-          delay={d.delay}
-          vx={d.vx}
-          vy={d.vy}
-          hx={d.hx}
-          hy={d.hy}
-          sx={d.sx}
-          sy={d.sy}
-          phase={phase}
-          entered={entered}
-        />
-      ))}
+      <div
+        ref={dotsRootRef}
+        role="presentation"
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          left: wrapPadX,
+          top: wrapPadYTop,
+          width: canvasW,
+          height: canvasH,
+          padding: '12px 8px 8px',
+          boxSizing: 'content-box',
+          '--dotScale': 1,
+          transform: 'translateZ(0)',
+          backfaceVisibility: 'hidden',
+          pointerEvents: 'none'
+        }}
+      >
+        {dots.map((d) => (
+          <TitleDotBlock
+            key={d.id}
+            size={d.size}
+            accent={titleColor}
+            ox={d.ox}
+            oy={d.oy}
+            delay={d.delay}
+            vx={d.vx}
+            vy={d.vy}
+            hx={d.hx}
+            hy={d.hy}
+            sx={d.sx}
+            sy={d.sy}
+            phase={phase}
+            entered={entered}
+          />
+        ))}
+      </div>
+      <NavWordsCanvas
+        navWords={navWords}
+        entered={entered}
+        phase={phase}
+        canInteract={Boolean(canInteract)}
+        wrapW={wrapW}
+        wrapH={wrapH}
+        centerX={centerX}
+        centerY={centerY}
+        spreadX={navSpreadX}
+        spreadY={navSpreadY}
+        onNavigate={scrollToBotPanel}
+      />
     </div>
   );
 };

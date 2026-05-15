@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { VoxelHeroTitle } from 'components/VoxelHeroTitle';
 
 const darkTheme = {
@@ -56,7 +56,7 @@ const anchorRailStyle = {
 
 const subtitleStyle = {
   margin: 0,
-  marginTop: 'clamp(12px, 2.5vh, 28px)',
+  marginTop: 'clamp(12px, 2vh, 24px)',
   fontSize: 'clamp(10px, 1.1vw, 13px)',
   fontWeight: 400,
   letterSpacing: '0.24em',
@@ -81,7 +81,7 @@ const buttonStyle = {
   position: 'relative',
   clipPath: 'polygon(9% 0, 100% 0, 91% 100%, 0 100%)',
   overflow: 'hidden',
-  marginTop: 'clamp(20px, 3.5vh, 40px)',
+  marginTop: 'clamp(14px, 2.2vh, 22px)',
   transition: 'transform 300ms ease, box-shadow 300ms ease, border-color 300ms ease, background 300ms ease'
 };
 
@@ -103,6 +103,7 @@ export const LiquidHeroScene = () => {
   const [hoveredAnchor, setHoveredAnchor] = useState('');
   const [isButtonHover, setIsButtonHover] = useState(false);
   const [entered, setEntered] = useState(false);
+  const [animationComplete, setAnimationComplete] = useState(false);
   const isTablet = viewportWidth <= 1200;
   const isMobile = viewportWidth <= 900;
   const isSmallMobile = viewportWidth <= 640;
@@ -126,6 +127,53 @@ export const LiquidHeroScene = () => {
   }, []);
 
   useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  useEffect(() => {
+    if (animationComplete) {
+      return undefined;
+    }
+
+    const html = document.documentElement;
+    const body = document.body;
+    const prevHtmlOverflow = html.style.overflow;
+    const prevBodyOverflow = body.style.overflow;
+    html.style.overflow = 'hidden';
+    body.style.overflow = 'hidden';
+
+    const blockScroll = (event) => {
+      event.preventDefault();
+    };
+    const blockKeys = (event) => {
+      const keys = ['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '];
+      if (keys.includes(event.key)) {
+        event.preventDefault();
+      }
+    };
+
+    window.addEventListener('wheel', blockScroll, { passive: false });
+    window.addEventListener('touchmove', blockScroll, { passive: false });
+    window.addEventListener('keydown', blockKeys);
+
+    return () => {
+      html.style.overflow = prevHtmlOverflow;
+      body.style.overflow = prevBodyOverflow;
+      window.removeEventListener('wheel', blockScroll);
+      window.removeEventListener('touchmove', blockScroll);
+      window.removeEventListener('keydown', blockKeys);
+    };
+  }, [animationComplete]);
+
+  const handleAnimationComplete = useCallback(() => {
+    setAnimationComplete(true);
+  }, []);
+
+  useEffect(() => {
+    if (!animationComplete) {
+      return undefined;
+    }
+
     const updateActiveAnchor = () => {
       const viewportHeight = window.innerHeight || 1;
       const docEl = document.documentElement;
@@ -165,7 +213,7 @@ export const LiquidHeroScene = () => {
       window.removeEventListener('scroll', updateActiveAnchor);
       window.removeEventListener('resize', updateActiveAnchor);
     };
-  }, []);
+  }, [animationComplete]);
 
   const scrollToAnchor = (targetId) => {
     const node = document.getElementById(targetId);
@@ -190,8 +238,9 @@ export const LiquidHeroScene = () => {
         style={{
           ...anchorNavWrapStyle,
           left: isTablet ? (isMobile ? '14px' : '20px') : anchorNavWrapStyle.left,
-          opacity: isMobile ? 0 : 1,
-          pointerEvents: isMobile ? 'none' : 'auto'
+          opacity: isMobile ? 0 : animationComplete ? 1 : 0,
+          pointerEvents: isMobile || !animationComplete ? 'none' : 'auto',
+          transition: 'opacity 720ms ease'
         }}
       >
         <div style={anchorRailStyle}>
@@ -268,7 +317,10 @@ export const LiquidHeroScene = () => {
           maxWidth: '100%',
           textAlign: 'center',
           fontFamily: "Inter, 'Segoe UI', Arial, sans-serif",
-          color: darkTheme.colors.primary
+          color: darkTheme.colors.primary,
+          transform: isMobile
+            ? 'translateY(clamp(-16px, -2.5vh, -8px))'
+            : 'translateY(clamp(-40px, -5vh, -24px))'
         }}
       >
         <h1
@@ -288,15 +340,21 @@ export const LiquidHeroScene = () => {
             isTinyMobile={isTinyMobile}
             isSmallMobile={isSmallMobile}
             isMobile={isMobile}
-            colors={darkTheme.colors}
+            onAnimationComplete={handleAnimationComplete}
+            canInteract={animationComplete}
           />
         </h1>
         <p
           style={{
             ...subtitleStyle,
-            opacity: entered ? subtitleStyle.opacity : 0,
-            transform: entered ? 'translateY(0)' : 'translateY(18px)',
-            transition: 'opacity 780ms ease 1100ms, transform 900ms cubic-bezier(0.22, 1, 0.36, 1) 1100ms'
+            marginTop: isMobile
+              ? 'clamp(10px, 1.8vh, 18px)'
+              : subtitleStyle.marginTop,
+            opacity: animationComplete ? subtitleStyle.opacity : 0,
+            transform: animationComplete ? 'translateY(0)' : 'translateY(14px)',
+            visibility: animationComplete ? 'visible' : 'hidden',
+            pointerEvents: animationComplete ? 'auto' : 'none',
+            transition: 'opacity 720ms ease, transform 820ms cubic-bezier(0.22, 1, 0.36, 1)'
           }}
         >
           Qodeq - AI platform automating operations in iGaming
@@ -307,10 +365,12 @@ export const LiquidHeroScene = () => {
           type="button"
           style={{
             ...buttonStyle,
-            opacity: entered ? 1 : 0,
-            transform: entered ? 'translateY(0)' : 'translateY(22px)',
+            opacity: animationComplete ? 1 : 0,
+            transform: animationComplete ? 'translateY(0)' : 'translateY(16px)',
+            visibility: animationComplete ? 'visible' : 'hidden',
+            pointerEvents: animationComplete ? 'auto' : 'none',
             transition:
-              'opacity 680ms ease 1400ms, transform 820ms cubic-bezier(0.22, 1, 0.36, 1) 1400ms, box-shadow 300ms ease, border-color 300ms ease, background 300ms ease',
+              'opacity 680ms ease 120ms, transform 780ms cubic-bezier(0.22, 1, 0.36, 1) 120ms, box-shadow 300ms ease, border-color 300ms ease, background 300ms ease',
             fontSize: isMobile
               ? isTinyMobile
                 ? '9px'

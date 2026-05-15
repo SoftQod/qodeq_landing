@@ -18,6 +18,7 @@ const darkTheme = {
 const panels = [
   {
     id: '01',
+    slug: 'chatbot',
     title: 'Chatbot',
     text: `AI-powered chatbot for automatic processing of user inquiries.
 
@@ -36,6 +37,7 @@ Key advantages:
   },
   {
     id: '02',
+    slug: 'call-center-bot',
     title: 'Call Center Bot',
     text: `Intelligent phone call processing system with speech recognition.
 
@@ -54,6 +56,7 @@ Key advantages:
   },
   {
     id: '03',
+    slug: 'payment-bot',
     title: 'Payment Bot',
     text: `Automated system for processing payment requests and support.
 
@@ -72,6 +75,7 @@ Key advantages:
   },
   {
     id: '04',
+    slug: 'qa-bot',
     title: 'QA Bot',
     text: `Service quality control system based on artificial intelligence.
 
@@ -793,6 +797,7 @@ export const HorizontalScrollSection = () => {
           {panels.map((panel, index) => (
             <article
               key={panel.id}
+              id={`bot-${panel.slug}`}
               style={{
                 ...panelStyleBase,
                 paddingTop: 0,
