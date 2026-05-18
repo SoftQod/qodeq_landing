@@ -2,13 +2,33 @@
 
 /* Не задаём overflow-x на html/body: это ломает position:sticky у Horizontal Flow и Story. */
 
+html,
 body {
   margin: 0;
+  background-color: #0d0d0d;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  background-color: #0d0d0d;
+}
+
+#hero-main {
+  background-color: #0d0d0d;
+}
+
+.hero-spline,
+.hero-spline canvas {
+  background-color: #0d0d0d;
+}
+
+/* lighten только после готовности — иначе белые углы при загрузке */
+.hero-spline[data-spline-ready='true'] canvas {
+  mix-blend-mode: lighten;
 }
 
 .sr-only {
