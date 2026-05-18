@@ -1,13 +1,8 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { HeroSpline } from 'components/HeroSpline';
+import { SiteHeader } from 'components/SiteHeader';
 import { HERO_CUBE_FOCUS, heroTheme as theme, qodeqRgba } from 'theme/qodeqColors';
-
-const topNavLinks = [
-  { label: 'Home', id: 'hero-main' },
-  { label: 'Bots', id: 'horizontal-flow' },
-  { label: 'Platform', id: 'reveal-blocks' },
-  { label: 'Contact', id: 'terminal-echo' }
-];
 
 const tags = ['CHATBOT', 'CALL CENTER', 'PAYMENT', 'QA', 'AUTOMATION'];
 
@@ -16,7 +11,7 @@ export const LiquidHeroScene = () => {
     typeof window !== 'undefined' ? window.innerWidth || 1440 : 1440
   );
   const [activeSection, setActiveSection] = useState('hero-main');
-  const [hoverNav, setHoverNav] = useState('');
+  const navigate = useNavigate();
   const [hoverPrimary, setHoverPrimary] = useState(false);
   const [hoverSecondary, setHoverSecondary] = useState(false);
   const [uiVisible, setUiVisible] = useState(false);
@@ -31,7 +26,6 @@ export const LiquidHeroScene = () => {
     const sections = [
       'hero-main',
       'reveal-blocks',
-      'horizontal-flow',
       'automation-stats',
       'story-steps',
       'dotted-flow',
@@ -136,93 +130,13 @@ export const LiquidHeroScene = () => {
         }}
       />
 
-      <header
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 30,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: pad,
-          paddingRight: isMobile ? undefined : 'clamp(28px, 4vw, 40px)',
-          maxWidth: isMobile ? '100%' : 'min(1180px, calc(100% - 48px))',
-          margin: isMobile ? 0 : '0 auto',
-          boxSizing: 'border-box',
-          gap: 16,
-          ...uiFade(0)
-        }}
-      >
-        <nav
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            gap: isMobile ? '18px 22px' : '32px 40px'
-          }}
-          aria-label="Main"
-        >
-          {topNavLinks.map((link) => {
-            const active = activeSection === link.id;
-            return (
-              <button
-                key={link.id}
-                type="button"
-                onClick={() => scrollTo(link.id)}
-                onMouseEnter={() => setHoverNav(link.id)}
-                onMouseLeave={() => setHoverNav('')}
-                style={{
-                  margin: 0,
-                  padding: 0,
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  fontSize: isMobile ? 10 : 11,
-                  fontWeight: 400,
-                  letterSpacing: '0.22em',
-                  textTransform: 'uppercase',
-                  color: active || hoverNav === link.id ? theme.primary : theme.muted,
-                  transition: 'color 220ms ease'
-                }}
-              >
-                {link.label}
-              </button>
-            );
-          })}
-        </nav>
-
-        <button
-          type="button"
-          onClick={() => scrollTo('terminal-echo')}
-          style={{
-            flexShrink: 0,
-            margin: 0,
-            padding: isMobile ? '10px 20px' : '12px 28px',
-            borderRadius: '999px',
-            border: `1px solid ${theme.border}`,
-            background: 'transparent',
-            color: theme.primary,
-            fontSize: isMobile ? 10 : 11,
-            fontWeight: 400,
-            letterSpacing: '0.16em',
-            textTransform: 'uppercase',
-            cursor: 'pointer',
-            transition: 'border-color 220ms ease, background 220ms ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = theme.borderHover;
-            e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = theme.border;
-            e.currentTarget.style.background = 'transparent';
-          }}
-        >
-          Let&apos;s Talk!
-        </button>
-      </header>
+      <SiteHeader
+        activeSection={activeSection}
+        isMobile={isMobile}
+        pad={pad}
+        position="absolute"
+        fadeStyle={uiFade(0)}
+      />
 
       <div
         style={{
@@ -326,7 +240,7 @@ export const LiquidHeroScene = () => {
               label="Get Started"
               showPlus
               accent
-              onClick={() => scrollTo('horizontal-flow')}
+              onClick={() => navigate('/bots')}
               hover={hoverSecondary}
               onEnter={() => setHoverSecondary(true)}
               onLeave={() => setHoverSecondary(false)}

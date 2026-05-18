@@ -1,35 +1,15 @@
-import { LiquidHeroScene } from 'components/LiquidHeroScene';
-import { HorizontalScrollSection } from 'components/HorizontalScrollSection';
-import { AutomationStatsSection } from 'components/AutomationStatsSection';
-import { ScrollRevealBlocks } from 'components/ScrollRevealBlocks';
-import { PinnedStorytellingSection } from 'components/PinnedStorytellingSection';
-import { DottedFlowSection } from 'components/DottedFlowSection';
-import { TerminalEchoSection } from 'components/TerminalEchoSection';
-import { SiteFooter } from 'components/SiteFooter';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BotsPage } from 'components/BotsPage';
+import { HomePage } from 'components/HomePage';
 
 export const App = () => {
   return (
-    <>
-      <LiquidHeroScene />
-      <div id="reveal-blocks">
-        <ScrollRevealBlocks />
-      </div>
-      <div id="horizontal-flow">
-        <HorizontalScrollSection />
-      </div>
-      <div id="automation-stats">
-        <AutomationStatsSection />
-      </div>
-      <div id="story-steps">
-        <PinnedStorytellingSection />
-      </div>
-      <div id="dotted-flow">
-        <DottedFlowSection />
-      </div>
-      <div id="terminal-echo">
-        <TerminalEchoSection />
-      </div>
-      <SiteFooter />
-    </>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/bots" element={<BotsPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 };

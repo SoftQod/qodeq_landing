@@ -1,3 +1,4 @@
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { TbBrandGithub, TbBrandLinkedin, TbBrandTelegram, TbMail } from 'react-icons/tb';
 
 const theme = {
@@ -12,7 +13,7 @@ const theme = {
 const FOOTER_LINKS = [
   { id: 'hero-main', label: 'Hero' },
   { id: 'reveal-blocks', label: 'Blocks' },
-  { id: 'horizontal-flow', label: 'Flow' },
+  { id: 'bots', label: 'Bots', path: '/bots' },
   { id: 'automation-stats', label: 'Stats' },
   { id: 'story-steps', label: 'Story' },
   { id: 'dotted-flow', label: 'Dotted' },
@@ -69,12 +70,27 @@ function FooterSocialIcon({ name }) {
 }
 
 export const SiteFooter = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const scrollToId = (targetId) => {
+    if (location.pathname !== '/') {
+      navigate({ pathname: '/', hash: `#${targetId}` });
+      return;
+    }
     const node = document.getElementById(targetId);
     if (!node) {
       return;
     }
     node.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const onFooterLink = (item, e) => {
+    if (item.path) {
+      return;
+    }
+    e.preventDefault();
+    scrollToId(item.id);
   };
 
   const resetIconBtn = (el) => {
@@ -213,37 +229,47 @@ export const SiteFooter = () => {
               gap: '14px 22px'
             }}
           >
-            {FOOTER_LINKS.map((item) => (
-              <li key={item.id}>
-                <a
-                  href={`#${item.id}`}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    scrollToId(item.id);
-                  }}
-                  style={{
-                    fontSize: 'clamp(12px, 1vw, 13px)',
-                    letterSpacing: '0.14em',
-                    textTransform: 'uppercase',
-                    color: theme.muted,
-                    textDecoration: 'none',
-                    borderBottom: `1px solid transparent`,
-                    paddingBottom: 2,
-                    transition: 'color 180ms ease, border-color 180ms ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.color = theme.accent;
-                    e.currentTarget.style.borderBottomColor = `${theme.accent}66`;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = theme.muted;
-                    e.currentTarget.style.borderBottomColor = 'transparent';
-                  }}
-                >
-                  {item.label}
-                </a>
-              </li>
-            ))}
+            {FOOTER_LINKS.map((item) => {
+              const linkStyle = {
+                fontSize: 'clamp(12px, 1vw, 13px)',
+                letterSpacing: '0.14em',
+                textTransform: 'uppercase',
+                color: theme.muted,
+                textDecoration: 'none',
+                borderBottom: '1px solid transparent',
+                paddingBottom: 2,
+                transition: 'color 180ms ease, border-color 180ms ease'
+              };
+              const hoverHandlers = {
+                onMouseEnter: (e) => {
+                  e.currentTarget.style.color = theme.accent;
+                  e.currentTarget.style.borderBottomColor = `${theme.accent}66`;
+                },
+                onMouseLeave: (e) => {
+                  e.currentTarget.style.color = theme.muted;
+                  e.currentTarget.style.borderBottomColor = 'transparent';
+                }
+              };
+
+              return (
+                <li key={item.id}>
+                  {item.path ? (
+                    <Link to={item.path} style={linkStyle} {...hoverHandlers}>
+                      {item.label}
+                    </Link>
+                  ) : (
+                    <a
+                      href={`#${item.id}`}
+                      onClick={(e) => onFooterLink(item, e)}
+                      style={linkStyle}
+                      {...hoverHandlers}
+                    >
+                      {item.label}
+                    </a>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </nav>
         </div>
