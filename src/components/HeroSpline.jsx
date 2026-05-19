@@ -5,7 +5,12 @@ import {
   setSplineBackground,
   syncSplineQodeqTheme
 } from 'components/splineQodeqTheme';
-import { HERO_CUBE_FOCUS, QODEQ_BG } from 'theme/qodeqColors';
+import {
+  getHeroProportionalScale,
+  HERO_CUBE_FOCUS,
+  HERO_CUBE_STRETCH,
+  QODEQ_BG
+} from 'theme/qodeqColors';
 
 const SCENE_URL = `${process.env.PUBLIC_URL || ''}/scene.splinecode`;
 
@@ -22,15 +27,19 @@ const wrapStyle = {
 function getCssScale() {
   const w = typeof window !== 'undefined' ? window.innerWidth : 1440;
   const h = typeof window !== 'undefined' ? window.innerHeight : 900;
-  const minDim = Math.min(w, h);
-  return Math.max(1.2, Math.min(1.65, minDim / 720));
+  const hero = getHeroProportionalScale(w, h, w <= 900);
+  const base = Math.max(1.05, Math.min(1.62, 1.02 + hero * 0.42));
+  return {
+    x: base * HERO_CUBE_STRETCH.x,
+    y: base * HERO_CUBE_STRETCH.y
+  };
 }
 
 function HeroSplineFallback() {
   return <div style={wrapStyle} aria-hidden />;
 }
 
-export const HeroSpline = () => {
+export const HeroSpline = ({ onReady }) => {
   const appRef = useRef(null);
   const wrapRef = useRef(null);
   const themeTimersRef = useRef([]);
@@ -53,8 +62,9 @@ export const HeroSpline = () => {
       paintCanvasBackground(true);
       wrapRef.current?.setAttribute('data-spline-ready', 'true');
       setSceneReady(true);
+      onReady?.();
     },
-    [paintCanvasBackground]
+    [paintCanvasBackground, onReady]
   );
 
   const applyTheme = useCallback(
@@ -73,7 +83,7 @@ export const HeroSpline = () => {
       themeTimersRef.current.forEach((id) => window.clearTimeout(id));
       themeTimersRef.current = [];
 
-      const delays = [0, 100, 300, 700];
+      const delays = [0, 40, 120, 200];
       themeTimersRef.current = delays.map((ms) =>
         window.setTimeout(() => {
           if (appRef.current) {
@@ -103,7 +113,7 @@ export const HeroSpline = () => {
         applySplineQodeqTheme(app);
 
         renderedCountRef.current += 1;
-        if (renderedCountRef.current >= 2) {
+        if (renderedCountRef.current >= 1) {
           revealScene(app);
         }
       };
@@ -130,10 +140,12 @@ export const HeroSpline = () => {
     top: HERO_CUBE_FOCUS.y,
     width: '100%',
     height: '100%',
-    transform: `translate(-50%, -50%) scale(${cssScale})`,
+    transform: `translate(-50%, -50%) scale(${cssScale.x}, ${cssScale.y})`,
     transformOrigin: 'center center',
     pointerEvents: sceneReady ? 'auto' : 'none',
     visibility: sceneReady ? 'visible' : 'hidden',
+    opacity: sceneReady ? 1 : 0,
+    transition: 'opacity 240ms ease',
     background: QODEQ_BG
   };
 

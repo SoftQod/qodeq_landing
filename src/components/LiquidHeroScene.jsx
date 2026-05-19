@@ -2,30 +2,44 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { HeroSpline } from 'components/HeroSpline';
 import { SiteHeader } from 'components/SiteHeader';
-import { HERO_CUBE_FOCUS, heroTheme as theme, qodeqRgba } from 'theme/qodeqColors';
+import { heroEnterStyle, HERO_PART } from 'components/heroEnterStyle';
+import {
+  getHeroBottomBlockScale,
+  getHeroProportionalScale,
+  HERO_CORNER_BOOST,
+  HERO_CUBE_FOCUS,
+  HERO_DOT_ALPHA,
+  heroTheme as theme,
+  landingPagePad,
+  qodeqRgba
+} from 'theme/qodeqColors';
 
 const tags = ['CHATBOT', 'CALL CENTER', 'PAYMENT', 'QA', 'AUTOMATION'];
 
 export const LiquidHeroScene = () => {
-  const [viewportWidth, setViewportWidth] = useState(() =>
-    typeof window !== 'undefined' ? window.innerWidth || 1440 : 1440
-  );
+  const [viewport, setViewport] = useState(() => ({
+    width: typeof window !== 'undefined' ? window.innerWidth || 1440 : 1440,
+    height: typeof window !== 'undefined' ? window.innerHeight || 900 : 900
+  }));
+  const viewportWidth = viewport.width;
   const [activeSection, setActiveSection] = useState('hero-main');
   const navigate = useNavigate();
   const [hoverPrimary, setHoverPrimary] = useState(false);
   const [hoverSecondary, setHoverSecondary] = useState(false);
   const [uiVisible, setUiVisible] = useState(false);
+  const [splineReady, setSplineReady] = useState(false);
   const isMobile = viewportWidth <= 900;
 
   useEffect(() => {
-    const t = window.setTimeout(() => setUiVisible(true), 500);
-    return () => window.clearTimeout(t);
+    const t = window.requestAnimationFrame(() => setUiVisible(true));
+    return () => window.cancelAnimationFrame(t);
   }, []);
 
   useEffect(() => {
     const sections = [
       'hero-main',
       'reveal-blocks',
+      'horizontal-flow',
       'automation-stats',
       'story-steps',
       'dotted-flow',
@@ -67,23 +81,25 @@ export const LiquidHeroScene = () => {
   };
 
   useEffect(() => {
-    const onResize = () => setViewportWidth(window.innerWidth || 1440);
+    const onResize = () => {
+      setViewport({
+        width: window.innerWidth || 1440,
+        height: window.innerHeight || 900
+      });
+    };
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  const pad = isMobile
-    ? 'max(16px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(22px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left))'
-    : 'max(24px, env(safe-area-inset-top)) max(36px, env(safe-area-inset-right)) max(32px, env(safe-area-inset-bottom)) max(36px, env(safe-area-inset-left))';
+  const pad = landingPagePad(isMobile);
+  const heroScale = getHeroProportionalScale(viewport.width, viewport.height, isMobile);
+  const cornerScale = getHeroBottomBlockScale(viewport.width, viewport.height, isMobile);
+  const headerScale = getHeroProportionalScale(viewport.width, viewport.height, isMobile) * HERO_CORNER_BOOST;
 
   const cubeFocusX = HERO_CUBE_FOCUS.x;
   const cubeFocusY = HERO_CUBE_FOCUS.y;
 
-  const uiFade = (delay = 0) => ({
-    opacity: uiVisible ? 1 : 0,
-    transform: uiVisible ? 'translateY(0)' : 'translateY(14px)',
-    transition: `opacity 700ms ease ${delay}ms, transform 820ms cubic-bezier(0.22, 1, 0.36, 1) ${delay}ms`
-  });
+  const enter = (order, visible = uiVisible) => heroEnterStyle(visible, order);
 
   return (
     <main
@@ -108,15 +124,16 @@ export const LiquidHeroScene = () => {
           zIndex: 0,
           backgroundColor: theme.bg,
           backgroundImage: `
-            radial-gradient(circle at center, rgba(16, 163, 127, 0.11) 1px, transparent 1px)
+            radial-gradient(circle at center, rgba(16, 163, 127, ${HERO_DOT_ALPHA}) 1px, transparent 1px)
           `,
           backgroundSize: '32px 32px',
-          backgroundPosition: `${cubeFocusX} ${cubeFocusY}`
+          backgroundPosition: `${cubeFocusX} ${cubeFocusY}`,
+          ...enter(HERO_PART.bgDots)
         }}
       />
 
-      <div style={{ position: 'absolute', inset: 0, zIndex: 2 }}>
-        <HeroSpline />
+      <div style={{ position: 'absolute', inset: 0, zIndex: 2, ...enter(HERO_PART.spline, uiVisible && splineReady) }}>
+        <HeroSpline onReady={() => setSplineReady(true)} />
       </div>
 
       <div
@@ -126,7 +143,8 @@ export const LiquidHeroScene = () => {
           inset: 0,
           zIndex: 3,
           pointerEvents: 'none',
-          background: `radial-gradient(ellipse 85% 70% at ${cubeFocusX} ${cubeFocusY}, transparent 50%, ${qodeqRgba(0.28)} 100%)`
+          background: `radial-gradient(ellipse 85% 70% at ${cubeFocusX} ${cubeFocusY}, transparent 50%, ${qodeqRgba(0.28)} 100%)`,
+          ...enter(HERO_PART.vignette)
         }}
       />
 
@@ -135,25 +153,26 @@ export const LiquidHeroScene = () => {
         isMobile={isMobile}
         pad={pad}
         position="absolute"
-        fadeStyle={uiFade(0)}
+        fadeStyle={enter(HERO_PART.header)}
+        enlarged
+        uiScale={headerScale}
       />
 
       <div
         style={{
           position: 'absolute',
-          left: isMobile ? 0 : '50%',
-          right: isMobile ? 0 : 'auto',
+          left: 0,
+          right: 0,
           bottom: 0,
           zIndex: 30,
-          width: isMobile ? '100%' : 'min(1180px, calc(100% - 48px))',
-          transform: isMobile ? 'none' : 'translateX(-50%)',
+          width: '100%',
           display: 'flex',
           flexDirection: isMobile ? 'column' : 'row',
           alignItems: isMobile ? 'stretch' : 'flex-end',
           justifyContent: 'space-between',
-          gap: isMobile ? 24 : 32,
+          gap: (isMobile ? 24 : 32) * heroScale,
           padding: pad,
-          paddingTop: isMobile ? 72 : 88,
+          paddingTop: (isMobile ? 78 : 92) * heroScale,
           boxSizing: 'border-box',
           pointerEvents: 'none'
         }}
@@ -161,20 +180,21 @@ export const LiquidHeroScene = () => {
         <div
           style={{
             pointerEvents: 'none',
-            maxWidth: isMobile ? '100%' : '52%',
-            paddingRight: isMobile ? 0 : 16,
-            ...uiFade(80)
+            maxWidth: isMobile ? '100%' : '52%'
           }}
         >
           <h1
             style={{
               margin: 0,
-              fontSize: isMobile ? 'clamp(2.4rem, 12vw, 3.2rem)' : 'clamp(3rem, 6.8vw, 5.5rem)',
+              fontSize: isMobile
+                ? `clamp(${2.4 * heroScale}rem, ${12 * heroScale}vw, ${3.2 * heroScale}rem)`
+                : `clamp(${3 * heroScale}rem, ${6.8 * heroScale}vw, ${5.5 * heroScale}rem)`,
               fontWeight: 700,
               lineHeight: 0.95,
               letterSpacing: '-0.02em',
               textTransform: 'none',
-              color: theme.primary
+              color: theme.primary,
+              ...enter(HERO_PART.title)
             }}
           >
             <span style={{ display: 'block' }}>QODEQ</span>
@@ -182,13 +202,17 @@ export const LiquidHeroScene = () => {
           </h1>
           <p
             style={{
-              margin: 'clamp(18px, 3vh, 28px) 0 0',
-              fontSize: isMobile ? 9 : 10,
+              margin: `${18 * heroScale}px 0 0`,
+              fontSize: isMobile
+                ? (9 * cornerScale)
+                : `clamp(7px, ${0.52 * cornerScale}vw, ${10 * cornerScale}px)`,
               fontWeight: 400,
-              letterSpacing: '0.2em',
+              letterSpacing: isMobile ? '0.16em' : '0.18em',
               textTransform: 'uppercase',
               color: theme.secondary,
-              lineHeight: 1.6
+              lineHeight: 1.5,
+              whiteSpace: isMobile ? 'normal' : 'nowrap',
+              ...enter(HERO_PART.tags)
             }}
           >
             {tags.join('  \\  ')}
@@ -198,22 +222,24 @@ export const LiquidHeroScene = () => {
         <div
           style={{
             pointerEvents: 'none',
-            maxWidth: isMobile ? '100%' : 340,
+            maxWidth: isMobile ? '100%' : 340 * cornerScale,
             marginLeft: isMobile ? 0 : 'auto',
-            paddingLeft: isMobile ? 0 : 12,
-            textAlign: isMobile ? 'left' : 'right',
-            ...uiFade(160)
+            textAlign: isMobile ? 'left' : 'right'
           }}
         >
           <p
             style={{
               margin: 0,
-              fontSize: isMobile ? 11 : 12,
-              lineHeight: 1.65,
+              fontSize: isMobile
+                ? 11 * cornerScale
+                : `clamp(9px, ${0.62 * cornerScale}vw, ${12 * cornerScale}px)`,
+              lineHeight: 1.5,
               fontStyle: 'italic',
               color: theme.secondary,
-              maxWidth: 340,
-              marginLeft: isMobile ? 0 : 'auto'
+              maxWidth: isMobile ? '100%' : 380 * cornerScale,
+              marginLeft: isMobile ? 0 : 'auto',
+              whiteSpace: isMobile ? 'normal' : 'nowrap',
+              ...enter(HERO_PART.description)
             }}
           >
             Qodeq — AI platform automating operations in iGaming
@@ -221,11 +247,12 @@ export const LiquidHeroScene = () => {
           <div
             style={{
               display: 'flex',
-              flexWrap: 'wrap',
-              gap: 10,
-              marginTop: 22,
+              flexWrap: isMobile ? 'wrap' : 'nowrap',
+              gap: 10 * cornerScale,
+              marginTop: 22 * cornerScale,
               justifyContent: isMobile ? 'flex-start' : 'flex-end',
-              pointerEvents: 'auto'
+              pointerEvents: 'auto',
+              ...enter(HERO_PART.actions)
             }}
           >
             <PillButton
@@ -235,6 +262,7 @@ export const LiquidHeroScene = () => {
               onEnter={() => setHoverPrimary(true)}
               onLeave={() => setHoverPrimary(false)}
               isMobile={isMobile}
+              scale={cornerScale}
             />
             <PillButton
               label="Get Started"
@@ -245,6 +273,7 @@ export const LiquidHeroScene = () => {
               onEnter={() => setHoverSecondary(true)}
               onLeave={() => setHoverSecondary(false)}
               isMobile={isMobile}
+              scale={cornerScale}
             />
           </div>
         </div>
@@ -253,7 +282,7 @@ export const LiquidHeroScene = () => {
   );
 };
 
-function PillButton({ label, onClick, hover, onEnter, onLeave, isMobile, showPlus, accent }) {
+function PillButton({ label, onClick, hover, onEnter, onLeave, isMobile, showPlus, accent, scale = 1 }) {
   return (
     <button
       type="button"
@@ -266,15 +295,15 @@ function PillButton({ label, onClick, hover, onEnter, onLeave, isMobile, showPlu
         gap: 0,
         margin: 0,
         padding: 0,
-        paddingLeft: isMobile ? 18 : 22,
-        paddingRight: showPlus ? (isMobile ? 6 : 8) : isMobile ? 18 : 22,
-        paddingTop: isMobile ? 10 : 12,
-        paddingBottom: isMobile ? 10 : 12,
+        paddingLeft: (isMobile ? 18 : 22) * scale,
+        paddingRight: showPlus ? (isMobile ? 6 : 8) * scale : (isMobile ? 18 : 22) * scale,
+        paddingTop: (isMobile ? 6 : 7) * scale,
+        paddingBottom: (isMobile ? 6 : 7) * scale,
         borderRadius: '999px',
         border: `1px solid ${hover ? theme.borderHover : theme.border}`,
         background: hover ? 'rgba(255,255,255,0.05)' : 'transparent',
         color: theme.primary,
-        fontSize: isMobile ? 10 : 11,
+        fontSize: (isMobile ? 10 : 11) * scale,
         fontWeight: 400,
         letterSpacing: '0.14em',
         textTransform: 'uppercase',
@@ -290,13 +319,13 @@ function PillButton({ label, onClick, hover, onEnter, onLeave, isMobile, showPlu
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: isMobile ? 32 : 36,
-            height: isMobile ? 32 : 36,
-            marginLeft: isMobile ? 8 : 10,
+            width: (isMobile ? 26 : 28) * scale,
+            height: (isMobile ? 26 : 28) * scale,
+            marginLeft: (isMobile ? 6 : 8) * scale,
             borderRadius: '50%',
             background: theme.accent,
             color: theme.bg,
-            fontSize: 18,
+            fontSize: 15 * scale,
             fontWeight: 300,
             lineHeight: 1,
             flexShrink: 0

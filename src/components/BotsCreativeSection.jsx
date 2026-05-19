@@ -159,6 +159,112 @@ function BotsLauncherMenu({ onSelect }) {
   );
 }
 
+function HeroModuleIdentity({ bot, eyebrow, isMobile }) {
+  const clip = `polygon(${SKEW}px 0, 100% 0, calc(100% - ${SKEW}px) 100%, 0 100%)`;
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        alignItems: 'stretch',
+        gap: isMobile ? 10 : 14,
+        marginBottom: isMobile ? 28 : 40
+      }}
+    >
+      <motion.div
+        initial={{ opacity: 0, x: -12 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+          minWidth: isMobile ? 64 : 80,
+          padding: isMobile ? '18px 16px' : '22px 20px',
+          border: `1px solid ${bot.color}55`,
+          background: `${bot.color}12`,
+          clipPath: clip,
+          WebkitClipPath: clip
+        }}
+      >
+        <span
+          style={{
+            fontSize: isMobile ? '1.75rem' : '2.25rem',
+            fontWeight: 800,
+            lineHeight: 1,
+            letterSpacing: '-0.02em',
+            color: bot.color
+          }}
+        >
+          {bot.id}
+        </span>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.55, delay: 0.06, ease: [0.22, 1, 0.36, 1] }}
+        style={{
+          flex: '1 1 220px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          padding: isMobile ? '18px 20px' : '24px 28px',
+          border: `1px solid ${bot.color}44`,
+          background: `linear-gradient(128deg, ${bot.color}18 0%, ${qodeqRgba(0.96)} 52%)`,
+          clipPath: clip,
+          WebkitClipPath: clip,
+          boxSizing: 'border-box'
+        }}
+      >
+        {eyebrow ? (
+          <span
+            style={{
+              display: 'block',
+              marginBottom: 8,
+              fontSize: 10,
+              letterSpacing: '0.28em',
+              textTransform: 'uppercase',
+              color: theme.muted
+            }}
+          >
+            {eyebrow}
+          </span>
+        ) : null}
+        <p
+          style={{
+            margin: 0,
+            fontSize: isMobile ? 'clamp(1.75rem, 8vw, 2.25rem)' : 'clamp(2rem, 4.5vw, 3.25rem)',
+            fontWeight: 700,
+            lineHeight: 1,
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+            color: theme.primary
+          }}
+        >
+          {bot.title}
+        </p>
+        {bot.tagline ? (
+          <p
+            style={{
+              margin: '10px 0 0',
+              fontSize: isMobile ? 12 : 13,
+              lineHeight: 1.5,
+              color: bot.color,
+              letterSpacing: '0.04em',
+              maxWidth: 420
+            }}
+          >
+            {bot.tagline}
+          </p>
+        ) : null}
+      </motion.div>
+    </div>
+  );
+}
+
 function SectionBlock({ section, bot, isMobile }) {
   if (section.type === 'hero') {
     return (
@@ -168,25 +274,31 @@ function SectionBlock({ section, bot, isMobile }) {
           borderBottom: `1px solid ${bot.color}33`
         }}
       >
-        <p style={{ margin: '0 0 12px', fontSize: 11, letterSpacing: '0.28em', textTransform: 'uppercase', color: bot.color }}>
-          {section.eyebrow}
-        </p>
-        <h1
+        <HeroModuleIdentity bot={bot} eyebrow={section.eyebrow} isMobile={isMobile} />
+        <motion.h1
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
           style={{
             margin: '0 0 20px',
-            fontSize: isMobile ? 'clamp(2rem, 9vw, 2.75rem)' : 'clamp(2.5rem, 5vw, 4rem)',
-            fontWeight: 700,
-            lineHeight: 1.02,
+            fontSize: isMobile ? 'clamp(1.65rem, 6.5vw, 2.35rem)' : 'clamp(2rem, 3.8vw, 3.25rem)',
+            fontWeight: 600,
+            lineHeight: 1.08,
             letterSpacing: '-0.02em',
             color: theme.primary,
-            maxWidth: 900
+            maxWidth: 920
           }}
         >
           {section.title}
-        </h1>
-        <p style={{ margin: 0, fontSize: isMobile ? 15 : 18, lineHeight: 1.65, color: theme.secondary, maxWidth: 720 }}>
+        </motion.h1>
+        <motion.p
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, delay: 0.18, ease: [0.22, 1, 0.36, 1] }}
+          style={{ margin: 0, fontSize: isMobile ? 15 : 18, lineHeight: 1.65, color: theme.secondary, maxWidth: 720 }}
+        >
           {section.lead}
-        </p>
+        </motion.p>
       </header>
     );
   }

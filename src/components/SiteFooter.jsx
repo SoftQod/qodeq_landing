@@ -13,6 +13,7 @@ const theme = {
 const FOOTER_LINKS = [
   { id: 'hero-main', label: 'Hero' },
   { id: 'reveal-blocks', label: 'Blocks' },
+  { id: 'horizontal-flow', label: 'Bots flow' },
   { id: 'bots', label: 'Bots', path: '/bots' },
   { id: 'automation-stats', label: 'Stats' },
   { id: 'story-steps', label: 'Story' },

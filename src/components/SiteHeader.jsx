@@ -14,8 +14,11 @@ export const SiteHeader = ({
   isMobile = false,
   pad,
   position = 'absolute',
-  fadeStyle = {}
+  fadeStyle = {},
+  enlarged = false,
+  uiScale: enlargedUiScale = 1
 }) => {
+  const uiScale = enlarged ? enlargedUiScale : 1;
   const location = useLocation();
   const navigate = useNavigate();
   const pathname = location.pathname;
@@ -48,7 +51,7 @@ export const SiteHeader = ({
     background: 'transparent',
     cursor: 'pointer',
     textDecoration: 'none',
-    fontSize: isMobile ? 10 : 11,
+    fontSize: (isMobile ? 10 : 11) * uiScale,
     fontWeight: 400,
     letterSpacing: '0.22em',
     textTransform: 'uppercase',
@@ -68,10 +71,8 @@ export const SiteHeader = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
+        width: '100%',
         padding: pad,
-        paddingRight: isMobile ? undefined : 'clamp(28px, 4vw, 40px)',
-        maxWidth: isMobile ? '100%' : 'min(1180px, calc(100% - 48px))',
-        margin: isMobile ? 0 : '0 auto',
         boxSizing: 'border-box',
         gap: 16,
         background: position === 'sticky' ? theme.bg : 'transparent',
@@ -83,7 +84,7 @@ export const SiteHeader = ({
           display: 'flex',
           flexWrap: 'wrap',
           alignItems: 'center',
-          gap: isMobile ? '18px 22px' : '32px 40px'
+          gap: isMobile ? `${18 * uiScale}px ${22 * uiScale}px` : `${32 * uiScale}px ${40 * uiScale}px`
         }}
         aria-label="Main"
       >
@@ -98,12 +99,14 @@ export const SiteHeader = ({
         style={{
           flexShrink: 0,
           margin: 0,
-          padding: isMobile ? '10px 20px' : '12px 28px',
+          padding: isMobile
+            ? `${10 * uiScale}px ${20 * uiScale}px`
+            : `${12 * uiScale}px ${28 * uiScale}px`,
           borderRadius: '999px',
           border: `1px solid ${theme.border}`,
           background: 'transparent',
           color: theme.primary,
-          fontSize: isMobile ? 10 : 11,
+          fontSize: (isMobile ? 10 : 11) * uiScale,
           fontWeight: 400,
           letterSpacing: '0.16em',
           textTransform: 'uppercase',

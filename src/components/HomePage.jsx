@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { LiquidHeroScene } from 'components/LiquidHeroScene';
 import { AutomationStatsSection } from 'components/AutomationStatsSection';
 import { ScrollRevealBlocks } from 'components/ScrollRevealBlocks';
+import { HorizontalScrollSection } from 'components/HorizontalScrollSection';
 import { PinnedStorytellingSection } from 'components/PinnedStorytellingSection';
 import { DottedFlowSection } from 'components/DottedFlowSection';
 import { TerminalEchoSection } from 'components/TerminalEchoSection';
@@ -27,6 +28,9 @@ export const HomePage = () => {
       <LiquidHeroScene />
       <div id="reveal-blocks">
         <ScrollRevealBlocks />
+      </div>
+      <div id="horizontal-flow">
+        <HorizontalScrollSection />
       </div>
       <div id="automation-stats">
         <AutomationStatsSection />

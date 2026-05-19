@@ -10,8 +10,8 @@ export const botsPanels = [
       {
         type: 'hero',
         eyebrow: 'Module 01',
-        title: 'Chatbot',
-        lead: 'AI-powered assistant for automatic processing of user inquiries across web, app, and messenger channels in iGaming.'
+        title: 'Qodeq: automate up to 60% of requests without operators',
+        lead: 'Reduce support costs, speed up responses and provide 24/7 customer assistance.'
       },
       {
         type: 'text',

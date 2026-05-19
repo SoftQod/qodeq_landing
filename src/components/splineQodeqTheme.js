@@ -1,4 +1,6 @@
-import { QODEQ_BG, QODEQ_BG_HEX } from 'theme/qodeqColors';
+import { getHeroProportionalScale, HERO_CORNER_BOOST, QODEQ_BG, QODEQ_BG_HEX } from 'theme/qodeqColors';
+
+const cornerOriginalScale = new WeakMap();
 
 /** Палитра лендинга для перекраски Spline-сцены */
 export const QODEQ_THEME = {
@@ -125,6 +127,64 @@ function paintMaterialLayers(obj, targetColor) {
   }
 }
 
+function isHeroCornerDecorName(name) {
+  const n = String(name || '').trim();
+  if (!n || /material|geometry/i.test(n)) {
+    return false;
+  }
+  return /^frame$/i.test(n) || /^rectangle(\s+\d+)?$/i.test(n);
+}
+
+function getSplineCornerFactor() {
+  if (typeof window === 'undefined') {
+    return 1;
+  }
+  const w = window.innerWidth || 1440;
+  const h = window.innerHeight || 900;
+  return getHeroProportionalScale(w, h, w <= 900) * HERO_CORNER_BOOST;
+}
+
+function scaleHeroCornerDecor(obj) {
+  if (!obj || !isHeroCornerDecorName(obj.name)) {
+    return;
+  }
+
+  if (!cornerOriginalScale.has(obj)) {
+    try {
+      cornerOriginalScale.set(obj, {
+        x: obj.scale?.x ?? obj.scaleX ?? 1,
+        y: obj.scale?.y ?? obj.scaleY ?? 1,
+        z: obj.scale?.z ?? obj.scaleZ ?? 1
+      });
+    } catch {
+      return;
+    }
+  }
+
+  const base = cornerOriginalScale.get(obj);
+  const factor = getSplineCornerFactor();
+
+  try {
+    if (obj.scale && typeof obj.scale === 'object') {
+      obj.scale.x = base.x * factor;
+      obj.scale.y = base.y * factor;
+      obj.scale.z = base.z * factor;
+    }
+  } catch {
+    /* ignore */
+  }
+
+  try {
+    if (typeof obj.scaleX === 'number') {
+      obj.scaleX = base.x * factor;
+      obj.scaleY = base.y * factor;
+      obj.scaleZ = base.z * factor;
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
 function paintObject(obj) {
   const name = String(obj.name || '').toLowerCase();
 
@@ -210,7 +270,7 @@ export function fitSplineToViewport(app) {
 
   const minDim = Math.min(w, h);
   const maxDim = Math.max(w, h);
-  const zoom = Math.max(1.75, Math.min(3.2, (minDim / 480) * 1.05 + (maxDim / 1400) * 0.4));
+  const zoom = Math.max(2.05, Math.min(3.55, ((minDim / 480) * 1.18 + (maxDim / 1400) * 0.48) * 1.12));
 
   try {
     app.setZoom(zoom);
@@ -232,6 +292,7 @@ export function applySplineQodeqTheme(app) {
 
   const objects = app.getAllObjects?.() ?? [];
   for (let i = 0; i < objects.length; i += 1) {
+    scaleHeroCornerDecor(objects[i]);
     paintObject(objects[i]);
   }
 
