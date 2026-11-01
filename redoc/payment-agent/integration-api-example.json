@@ -1,0 +1,239 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Payment API",
+    "version": "1.0.0",
+    "description": "Read-only payment data API.\n\n- GET /transactions — transactions for a user within a date range.\n- GET /user-info — deposit totals, optionally filtered by date range.\n\nAuthentication: send the API key in the `X-API-Key` request header."
+  },
+  "servers": [
+    {
+      "url": "https://api.example.com/v1"
+    }
+  ],
+  "security": [{ "apiKeyAuth": [] }],
+  "paths": {
+    "/transactions": {
+      "get": {
+        "operationId": "getTransactions",
+        "summary": "Transactions for a user within a date range",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "schema": { "$ref": "#/components/schemas/Id" },
+            "description": "User ID."
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "example": "2026-06-09T00:00:00Z"
+            },
+            "description": "Range start (ISO 8601, UTC, inclusive)."
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "example": "2026-06-09T23:59:59Z"
+            },
+            "description": "Range end (ISO 8601, UTC, inclusive)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TransactionsResponse" },
+                "examples": {
+                  "found": {
+                    "value": {
+                      "transactions": [
+                        {
+                          "id": 987654321,
+                          "pay_system": "pay_system",
+                          "amount": 5000.0,
+                          "status": "success",
+                          "created_at": "2026-06-09T12:28:11Z"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/user-info": {
+      "get": {
+        "operationId": "getUserInfo",
+        "summary": "Deposit totals, optionally within a date range",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "schema": { "$ref": "#/components/schemas/Id" },
+            "description": "User ID."
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "example": "2026-06-09T00:00:00Z"
+            },
+            "description": "Range start (ISO 8601, UTC, inclusive). If omitted, totals cover all time."
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "example": "2026-06-09T23:59:59Z"
+            },
+            "description": "Range end (ISO 8601, UTC, inclusive). If omitted, totals cover all time."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UserInfoResponse" },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "deposit_amount": 154300.5,
+                      "withdraw_amount": 42000.0,
+                      "in_out": 112300.5
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "apiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "API key for authentication."
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Missing or invalid credentials",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Id": {
+        "type": ["integer", "string"],
+        "description": "ID as integer or string.",
+        "example": 1234567
+      },
+      "TransactionsResponse": {
+        "type": "object",
+        "required": ["transactions"],
+        "properties": {
+          "transactions": {
+            "type": "array",
+            "description": "Newest first.",
+            "items": { "$ref": "#/components/schemas/Transaction" }
+          }
+        }
+      },
+      "Transaction": {
+        "type": "object",
+        "required": ["id", "pay_system", "amount", "status", "created_at"],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Id",
+            "description": "Transaction ID.",
+            "example": 987654321
+          },
+          "pay_system": {
+            "type": "string",
+            "description": "Payment system name.",
+            "example": "pay_system"
+          },
+          "amount": {
+            "type": "number",
+            "description": "Transaction amount.",
+            "example": 5000.0
+          },
+          "status": {
+            "type": "string",
+            "description": "Transaction status.",
+            "enum": ["success", "failed", "pending"],
+            "example": "success"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Transaction creation time (ISO 8601, UTC).",
+            "example": "2026-06-09T12:28:11Z"
+          }
+        }
+      },
+      "UserInfoResponse": {
+        "type": "object",
+        "required": ["deposit_amount", "withdraw_amount", "in_out"],
+        "properties": {
+          "deposit_amount": {
+            "type": "number",
+            "format": "float",
+            "description": "Total deposit amount.",
+            "example": 154300.5
+          },
+          "withdraw_amount": {
+            "type": "number",
+            "format": "float",
+            "description": "Total withdrawal amount.",
+            "example": 42000.0
+          },
+          "in_out": {
+            "type": "number",
+            "format": "float",
+            "description": "Net in/out balance (deposits minus withdrawals).",
+            "example": 112300.5
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": { "type": "string", "example": "unauthorized" },
+          "message": { "type": "string", "example": "Invalid API key" }
+        }
+      }
+    }
+  }
+}

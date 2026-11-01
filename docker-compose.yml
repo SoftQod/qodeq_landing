@@ -1,0 +1,23 @@
+services:
+  contact-api:
+    build: ./contact-api
+    container_name: qodeq-contact-api
+    restart: unless-stopped
+    env_file: ./contact-api/.env
+    volumes:
+      # база заявок leads.db — переживает пересборку контейнера
+      - ./data:/app/data
+    expose:
+      - "3001"
+
+  web:
+    build: .
+    container_name: nginx
+    depends_on:
+      - contact-api
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./certs:/etc/nginx/certs:ro

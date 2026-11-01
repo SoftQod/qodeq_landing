@@ -1,0 +1,1274 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FastAPI",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/wager": {
+      "get": {
+        "summary": "Wager",
+        "description": "Returns the current wagering progress for a specific player,\nincluding the total requirement, amount already wagered, and remaining amount to complete",
+        "operationId": "wager_wager_get",
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "player_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "description": "User unique identifier. Can be email or user_id",
+              "title": "Player Id"
+            },
+            "description": "User unique identifier. Can be email or user_id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WagerResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Player Not Found"
+          },
+          "401": {
+            "description": "Unauthorized — invalid or missing API key"
+          },
+          "403": {
+            "description": "Forbidden — insufficient permissions"
+          },
+          "500": {
+            "description": "Internal server error"
+          },
+          "503": {
+            "description": "Service temporarily unavailable"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/profile-confirmation": {
+      "get": {
+        "summary": "Profile Confirmation",
+        "description": "Returns whether the player has confirmed their email address and phone number.",
+        "operationId": "profile_confirmation_profile_confirmation_get",
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "player_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "description": "User unique identifier. Can be email or user_id",
+              "title": "Player Id"
+            },
+            "description": "User unique identifier. Can be email or user_id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileConfirmationResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Player Not Found"
+          },
+          "401": {
+            "description": "Unauthorized — invalid or missing API key"
+          },
+          "403": {
+            "description": "Forbidden — insufficient permissions"
+          },
+          "500": {
+            "description": "Internal server error"
+          },
+          "503": {
+            "description": "Service temporarily unavailable"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cashback": {
+      "get": {
+        "summary": "Cashback",
+        "description": "Returns the current cashback status for a specific player.\nIf cashback is available, includes the amount and the date it becomes accessible.\nIf unavailable, provides the reason, the minimum loss threshold required to qualify, and optionally an alternative bonus.",
+        "operationId": "cashback_cashback_get",
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "player_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "description": "User unique identifier. Can be email or user_id",
+              "title": "Player Id"
+            },
+            "description": "User unique identifier. Can be email or user_id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/CashbackAvailableResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/CashbackUnavailableResponse"
+                    }
+                  ],
+                  "title": "Response Cashback Cashback Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Player Not Found"
+          },
+          "401": {
+            "description": "Unauthorized — invalid or missing API key"
+          },
+          "403": {
+            "description": "Forbidden — insufficient permissions"
+          },
+          "500": {
+            "description": "Internal server error"
+          },
+          "503": {
+            "description": "Service temporarily unavailable"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/verification": {
+      "get": {
+        "summary": "Verification",
+        "description": "Returns the current verification status for a specific player.",
+        "operationId": "verification_verification_get",
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "player_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "description": "User unique identifier. Can be email or user_id",
+              "title": "Player Id"
+            },
+            "description": "User unique identifier. Can be email or user_id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/VerificationResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/VerificationFailureResponse"
+                    }
+                  ],
+                  "title": "Response Verification Verification Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Player Not Found"
+          },
+          "401": {
+            "description": "Unauthorized — invalid or missing API key"
+          },
+          "403": {
+            "description": "Forbidden — insufficient permissions"
+          },
+          "500": {
+            "description": "Internal server error"
+          },
+          "503": {
+            "description": "Service temporarily unavailable"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deposit": {
+      "get": {
+        "summary": "Deposit",
+        "description": "Returns the list of last `limit` deposits for a specific player.\nDeposits should not be filtered and should be sorted by Datetime DESC (New deposits first)",
+        "operationId": "deposit_deposit_get",
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "player_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "description": "User unique identifier. Can be email or user_id",
+              "title": "Player Id"
+            },
+            "description": "User unique identifier. Can be email or user_id"
+          },
+          {
+            "name": "start_at",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start At"
+            }
+          },
+          {
+            "name": "end_at",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End At"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "exclusiveMaximum": 20,
+              "exclusiveMinimum": 0,
+              "default": 5,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/DepositResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/DepositFailureResponse"
+                    }
+                  ],
+                  "title": "Response Deposit Deposit Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Player Not Found"
+          },
+          "401": {
+            "description": "Unauthorized — invalid or missing API key"
+          },
+          "403": {
+            "description": "Forbidden — insufficient permissions"
+          },
+          "500": {
+            "description": "Internal server error"
+          },
+          "503": {
+            "description": "Service temporarily unavailable"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/withdraw": {
+      "get": {
+        "summary": "Withdraw",
+        "description": "Returns the list of last `limit` withdrawals for a specific player.\nWithdrawals should not be filtered and should be sorted by Datetime DESC (New deposits first)",
+        "operationId": "withdraw_withdraw_get",
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "player_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "description": "User unique identifier. Can be email or user_id",
+              "title": "Player Id"
+            },
+            "description": "User unique identifier. Can be email or user_id"
+          },
+          {
+            "name": "start_at",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start At"
+            }
+          },
+          {
+            "name": "end_at",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End At"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "exclusiveMaximum": 20,
+              "exclusiveMinimum": 0,
+              "default": 5,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/WithdrawResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/WithdrawFailureResponse"
+                    }
+                  ],
+                  "title": "Response Withdraw Withdraw Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Player Not Found"
+          },
+          "401": {
+            "description": "Unauthorized — invalid or missing API key"
+          },
+          "403": {
+            "description": "Forbidden — insufficient permissions"
+          },
+          "500": {
+            "description": "Internal server error"
+          },
+          "503": {
+            "description": "Service temporarily unavailable"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ticket": {
+      "post": {
+        "summary": "Ticket",
+        "operationId": "ticket_ticket_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Player Not Found"
+          },
+          "401": {
+            "description": "Unauthorized — invalid or missing API key"
+          },
+          "403": {
+            "description": "Forbidden — insufficient permissions"
+          },
+          "500": {
+            "description": "Internal server error"
+          },
+          "503": {
+            "description": "Service temporarily unavailable"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CashbackAlternativeBonus": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Bonus display name"
+          },
+          "link": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Link",
+            "description": "URL to the bonus page"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "link"
+        ],
+        "title": "CashbackAlternativeBonus"
+      },
+      "CashbackAvailableResponse": {
+        "properties": {
+          "is_available": {
+            "type": "boolean",
+            "const": true,
+            "title": "Is Available"
+          },
+          "amount": {
+            "type": "number",
+            "title": "Amount",
+            "description": "Cashback amount available"
+          },
+          "currency": {
+            "type": "string",
+            "maxLength": 3,
+            "minLength": 3,
+            "title": "Currency",
+            "description": "ISO 4217 currency code",
+            "example": "USD"
+          },
+          "available_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Available At",
+            "description": "Date and time when cashback becomes available to the player"
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_available",
+          "amount",
+          "currency",
+          "available_at"
+        ],
+        "title": "CashbackAvailableResponse",
+        "example": {
+          "amount": 25.0,
+          "available_at": "2026-01-01T00:00:00Z",
+          "currency": "USD",
+          "is_available": true
+        }
+      },
+      "CashbackUnavailableReason": {
+        "type": "string",
+        "enum": [
+          "insufficient_loss",
+          "player_in_profit",
+          "low_loyalty",
+          "admin_disabled"
+        ],
+        "title": "CashbackUnavailableReason",
+        "description": "- `insufficient_loss` — Player has not lost enough during the qualifying period\n- `player_in_profit` — Player has a net positive balance for the qualifying period\n- `low_loyalty` — Player's loyalty level does not meet the minimum requirement\n- `admin_disabled` — Cashback has been disabled by the operator"
+      },
+      "CashbackUnavailableResponse": {
+        "properties": {
+          "is_available": {
+            "type": "boolean",
+            "const": false,
+            "title": "Is Available"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/CashbackUnavailableReason"
+          },
+          "required_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Required Amount",
+            "description": "Minimum loss amount required to qualify for cashback"
+          },
+          "alternative_bonus": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CashbackAlternativeBonus"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Alternative bonus offered if cashback is unavailable"
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_available",
+          "reason",
+          "required_amount",
+          "alternative_bonus"
+        ],
+        "title": "CashbackUnavailableResponse",
+        "example": {
+          "alternative_bonus": {
+            "link": "https://example.com/bonuses/free-spins",
+            "name": "Free Spins"
+          },
+          "is_available": false,
+          "reason": "insufficient_loss",
+          "required_amount": 200.0
+        }
+      },
+      "DepositFailureResponse": {
+        "properties": {
+          "amount": {
+            "type": "number",
+            "title": "Amount",
+            "description": "Amount to be deposited"
+          },
+          "currency": {
+            "type": "string",
+            "maxLength": 3,
+            "minLength": 3,
+            "title": "Currency",
+            "description": "ISO 4217 currency code",
+            "example": "USD"
+          },
+          "datetime": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Datetime",
+            "description": "Date and time when deposit begins"
+          },
+          "method": {
+            "type": "string",
+            "title": "Method",
+            "description": "Deposit method. Recommended format: $1/$2, where $1 is crypto or fiat and $2 is usdt, btc for crypto or bank name for fiat",
+            "example": "crypto/usdt"
+          },
+          "transaction_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "Transaction Id",
+            "description": "Internal transaction ID that Player can see on the project"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PaymentReasonableResponse"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason",
+            "description": "Reason for the deposit failure"
+          }
+        },
+        "type": "object",
+        "required": [
+          "amount",
+          "currency",
+          "datetime",
+          "method",
+          "transaction_id",
+          "status",
+          "reason"
+        ],
+        "title": "DepositFailureResponse",
+        "example": {
+          "amount": 200.0,
+          "currency": "USD",
+          "datetime": "2020-01-01T20:13:56",
+          "method": "fiat/imagine-bank",
+          "reason": "Imaginary reason for deposit rejection",
+          "status": "rejected",
+          "transaction_id": "dCvs***c24sc"
+        }
+      },
+      "DepositResponse": {
+        "properties": {
+          "amount": {
+            "type": "number",
+            "title": "Amount",
+            "description": "Amount to be deposited"
+          },
+          "currency": {
+            "type": "string",
+            "maxLength": 3,
+            "minLength": 3,
+            "title": "Currency",
+            "description": "ISO 4217 currency code",
+            "example": "USD"
+          },
+          "datetime": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Datetime",
+            "description": "Date and time when deposit begins"
+          },
+          "method": {
+            "type": "string",
+            "title": "Method",
+            "description": "Deposit method. Recommended format: $1/$2, where $1 is crypto or fiat and $2 is usdt, btc for crypto or bank name for fiat",
+            "example": "crypto/usdt"
+          },
+          "transaction_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "Transaction Id",
+            "description": "Internal transaction ID that Player can see on the project"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PaymentStatus"
+          }
+        },
+        "type": "object",
+        "required": [
+          "amount",
+          "currency",
+          "datetime",
+          "method",
+          "transaction_id",
+          "status"
+        ],
+        "title": "DepositResponse",
+        "example": {
+          "amount": 200.0,
+          "currency": "USD",
+          "datetime": "2020-01-01T20:13:56",
+          "method": "fiat/imagine-bank",
+          "status": "pending",
+          "transaction_id": "dCvs***c24sc"
+        }
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "PaymentReasonableResponse": {
+        "type": "string",
+        "enum": [
+          "failed",
+          "rejected"
+        ],
+        "title": "PaymentReasonableResponse",
+        "description": "failed - request processing failed due to an internal error\nrejected - Operator rejected request"
+      },
+      "PaymentStatus": {
+        "type": "string",
+        "enum": [
+          "open",
+          "pending",
+          "canceled",
+          "success"
+        ],
+        "title": "PaymentStatus",
+        "description": "open - request received but not processed yet\npending - request received and being processed\ncanceled - user canceled the request\nsuccess - request has been successfully processed"
+      },
+      "ProfileConfirmationResponse": {
+        "properties": {
+          "email": {
+            "type": "boolean",
+            "title": "Email",
+            "description": "Whether the player's email address is confirmed"
+          },
+          "phone": {
+            "type": "boolean",
+            "title": "Phone",
+            "description": "Whether the player's phone number is confirmed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "phone"
+        ],
+        "title": "ProfileConfirmationResponse",
+        "description": "Player email and phone confirmation",
+        "example": {
+          "email": true,
+          "phone": false
+        }
+      },
+      "TicketRequest": {
+        "properties": {
+          "player_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "Player Id",
+            "description": "User unique identifier. Can be email or user_id"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "Ticket content"
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Priority"
+          },
+          "group": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "Group",
+            "description": "Ticket group/team assignment"
+          },
+          "agent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "Agent",
+            "description": "Ticket group/team assignment"
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "content",
+          "priority"
+        ],
+        "title": "TicketRequest",
+        "example": {
+          "content": "User Ticket Request with provided url https://...",
+          "group": "494d0b1c-6c54-4b0a-9e8a-8bf6d33b9cef",
+          "player_id": 32131231,
+          "priority": "low"
+        }
+      },
+      "TicketResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "success",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "TicketResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "VerificationFailureResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "failed",
+            "title": "Status"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason",
+            "description": "Reason for the verification failure"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "reason"
+        ],
+        "title": "VerificationFailureResponse",
+        "example": {
+          "reason": "Selfie is blurred",
+          "status": "failed"
+        }
+      },
+      "VerificationResponse": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/VerificationStatus"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "VerificationResponse",
+        "example": {
+          "status": "pending"
+        }
+      },
+      "VerificationStatus": {
+        "type": "string",
+        "enum": [
+          "succeed",
+          "pending"
+        ],
+        "title": "VerificationStatus"
+      },
+      "WagerResponse": {
+        "properties": {
+          "wagered": {
+            "type": "number",
+            "title": "Wagered",
+            "description": "Amount already wagered"
+          },
+          "remaining": {
+            "type": "number",
+            "title": "Remaining",
+            "description": "Amount left to complete wagering requirement"
+          },
+          "required": {
+            "type": "number",
+            "title": "Required",
+            "description": "Total wagering requirement"
+          },
+          "currency": {
+            "type": "string",
+            "maxLength": 3,
+            "minLength": 3,
+            "title": "Currency",
+            "description": "ISO 4217 currency code",
+            "example": "USD"
+          }
+        },
+        "type": "object",
+        "required": [
+          "wagered",
+          "remaining",
+          "required",
+          "currency"
+        ],
+        "title": "WagerResponse",
+        "description": "Wager Requirement",
+        "example": {
+          "currency": "USD",
+          "remaining": 50.0,
+          "required": 200.0,
+          "wagered": 150.0
+        }
+      },
+      "WithdrawFailureResponse": {
+        "properties": {
+          "amount": {
+            "type": "number",
+            "title": "Amount",
+            "description": "Amount to be withdrawn"
+          },
+          "currency": {
+            "type": "string",
+            "maxLength": 3,
+            "minLength": 3,
+            "title": "Currency",
+            "description": "ISO 4217 currency code",
+            "example": "USD"
+          },
+          "datetime": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Datetime",
+            "description": "Date and time when withdraw begins"
+          },
+          "method": {
+            "type": "string",
+            "title": "Method",
+            "description": "Withdraw method. Recommended format: $1/$2, where $1 is crypto or fiat and $2 is usdt, btc for crypto or bank name for fiat",
+            "example": "crypto/usdt"
+          },
+          "transaction_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "Transaction Id",
+            "description": "Internal transaction ID that Player can see on the project"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PaymentReasonableResponse"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason",
+            "description": "Reason for the withdraw failure"
+          }
+        },
+        "type": "object",
+        "required": [
+          "amount",
+          "currency",
+          "datetime",
+          "method",
+          "transaction_id",
+          "status",
+          "reason"
+        ],
+        "title": "WithdrawFailureResponse",
+        "example": {
+          "amount": 200.0,
+          "currency": "USD",
+          "datetime": "2020-01-01T20:13:56",
+          "method": "fiat/imagine-bank",
+          "reason": "Some internal error occurs. Try again later.",
+          "status": "failed",
+          "transaction_id": "dCvs***c24sc"
+        }
+      },
+      "WithdrawResponse": {
+        "properties": {
+          "amount": {
+            "type": "number",
+            "title": "Amount",
+            "description": "Amount to be withdrawn"
+          },
+          "currency": {
+            "type": "string",
+            "maxLength": 3,
+            "minLength": 3,
+            "title": "Currency",
+            "description": "ISO 4217 currency code",
+            "example": "USD"
+          },
+          "datetime": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Datetime",
+            "description": "Date and time when withdraw begins"
+          },
+          "method": {
+            "type": "string",
+            "title": "Method",
+            "description": "Withdraw method. Recommended format: $1/$2, where $1 is crypto or fiat and $2 is usdt, btc for crypto or bank name for fiat",
+            "example": "crypto/usdt"
+          },
+          "transaction_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "Transaction Id",
+            "description": "Internal transaction ID that Player can see on the project"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PaymentStatus"
+          }
+        },
+        "type": "object",
+        "required": [
+          "amount",
+          "currency",
+          "datetime",
+          "method",
+          "transaction_id",
+          "status"
+        ],
+        "title": "WithdrawResponse",
+        "example": {
+          "amount": 200.0,
+          "currency": "USD",
+          "datetime": "2020-01-01T20:13:56",
+          "method": "fiat/imagine-bank",
+          "status": "open",
+          "transaction_id": "dCvs***c24sc"
+        }
+      }
+    },
+    "securitySchemes": {
+      "APIKeyCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "X-API-Token"
+      }
+    }
+  }
+}

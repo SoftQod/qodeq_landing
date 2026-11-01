@@ -1,0 +1,8 @@
+.git
+.idea
+.vscode
+.DS_Store
+certs
+data
+contact-api
+*.md
